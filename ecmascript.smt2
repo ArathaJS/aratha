@@ -9,7 +9,7 @@
         (null)
         (Boolean (bool Bool))
         (Str (str String))
-        (Num (num Real))
+        (Num (num Int))
     )
 ))
 
@@ -27,13 +27,13 @@
     (ite (is-Num x) (int.to.str (to_int (num x)))
     "FOOBARBAZ"))))))
 
-(define-fun js.ToNumber ((x Val)) Real
+(define-fun js.ToNumber ((x Val)) Int
     (ite (is-Num x) (num x)
     (ite (is-undefined x) 0
     (ite (is-null x) 0
     (ite (is-Boolean x) (ite (bool x) 1 0)
     (ite (is-Str x) (str.to.int (str x))
-    42.0))))))
+    42))))))
 
 ; ECMAScript expressions
 
@@ -45,3 +45,5 @@
     (ite (or (is-Str x) (is-Str y))
         (Str (str.++ (js.ToString x) (js.ToString y)))
         (Num (+ (js.ToNumber x) (js.ToNumber y)))))
+
+(define-fun js.! ((x Bool)) Bool (not x))
