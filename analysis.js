@@ -429,6 +429,18 @@
             }
         },
 
+        unaryPre: function(iid, op, left) {
+            if ((left instanceof SymbolicValue)) {
+                return { op: op, left: left, skip: true };
+            }
+        },
+
+        unary: function(iid, op, left) {
+            if ((left instanceof SymbolicValue)) {
+                return { result: new Unary(iid, op, left) };
+            }
+        },
+
         invokeFunPre: function(iid, f, base, args) {
             if (f === sandbox.readInput) {
                 return { f: f, base: base, args: args, skip: true };
