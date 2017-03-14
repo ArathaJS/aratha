@@ -9,8 +9,8 @@
     const fs = require("fs");
 
     class ExecutionPath {
-        constructor() {
-            this.constraints = [];
+        constructor(constraints) {
+            this.constraints = constraints || [];
         }
 
         isEmpty() { return this.constraints.length === 0; }
@@ -26,6 +26,21 @@
         }
 
         clear() { this.constraints.length = 0; }
+    }
+
+    class ExecutionPathSet {
+        constructor() {
+            this._paths = new Set();
+        }
+
+        add(path) { this._paths.add(this._encode(path)); return this; }
+
+        has(path) { return this._paths.has(this._encode(path)); }
+
+        _encode(path) {
+            return _.map(path.constraints,
+                (c) => (c.value ? "" : "!") + c.expr.iid).join("$");
+        }
     }
 
     class SymbolicValue {
@@ -151,7 +166,7 @@
     class Binary extends SymbolicValue {
         constructor(iid, op, left, right) {
             super();
-            this.iid = J$.getGlobalIID(iid);
+            this.iid = iid; //J$.getGlobalIID(iid);
             this.op = op;
             this.left = left;
             this.right = right;
@@ -259,7 +274,7 @@
     class Unary extends SymbolicValue {
         constructor(iid, op, expr) {
             super();
-            this.iid = J$.getGlobalIID(iid);
+            this.iid = iid; //J$.getGlobalIID(iid);
             this.op = op;
             this.expr = expr;
         }
@@ -307,7 +322,7 @@
         toFormula() { return ["js." + this.op, valueToFormula(this.expr)]; }
     }
 
-    const MAX_INPUTS = 10;
+    const MAX_INPUTS = 2;
     const SOLVER_PATH = "../../z3/z3-4.5.0-x64-win/bin/z3";
     const ES_THEORY_PATH = "ecmascript.smt2";
 
@@ -345,8 +360,8 @@
         }
 
         submitCommands(commands) {
-            const commandString = _.map(commands, sexpr.stringify).join("\n");
-            console.log(commandString);
+            const commandString = _.map(commands, sexpr.stringify).join("\n") + "\n";
+            console.log(commandString.trim());
             this.process.stdin.write(commandString);
         }
 
@@ -358,21 +373,23 @@
 
     function collectVariables(expr) {
         const variables = {};
-        expr.visit((expr) => {
-            if (expr instanceof Variable) {
-                variables[expr.name] = expr;
-            }
-        });
+
+        if (expr instanceof SymbolicValue) {
+            expr.visit((expr) => {
+                if (expr instanceof Variable) {
+                    variables[expr.name] = expr;
+                }
+            });
+        } else {
+            _.forEach(expr, (v) => Object.assign(variables, collectVariables(v)));
+        }
+
         return variables;
     }
 
-    function generateSolverCommands(constraints, negateIndex) {
-        const commands = [];
-        const variables = {};
 
-        for (let i = 0; i < constraints.length; ++i) {
-            Object.assign(variables, collectVariables(constraints[i].expr));
-        }
+    function generateSolverCommands(path, variables) {
+        const commands = [];
 
         _.forEach(variables, (v) => {
             commands.push(v.declarationFormula());
@@ -381,19 +398,41 @@
             }
         });
 
-        for (let i = 0; i < constraints.length; ++i) {
-            if (i === negateIndex) {
-                commands.push(["assert", ["not", constraints[i].expr.toFormula()]]);
+        _.forEach(path.constraints, (c) => {
+            const formula = c.expr.toFormula();
+            if (c.value) {
+                commands.push(["assert", formula]);
             } else {
-                commands.push(["assert", constraints[i].expr.toFormula()]);
+                commands.push(["assert", ["not", formula]]);
             }
-        }
+        });
 
         commands.push(["check-sat"]);
-        commands.push(["get-value", _.map(variables, (v) => v.toFormula())]);
         return commands;
     }
 
+    function parseVarName(varName) {
+        // Slice off the 'var' prefix.
+        return varName.slice(3);
+    }
+
+    function parseVal(value) {
+        if (value === "undefined") { return undefined; }
+        if (value === "null") { return null; }
+
+        const type = value[0],
+            contents = value[1];
+        switch (type) {
+            case "Boolean":
+                return contents === "true";
+            case "Num":
+                return parseFloat(contents, 10);
+            case "Str":
+                return contents;
+            default:
+                throw new Error("invalid value type " + value.toString());
+        }
+    }
 
     J$.analysis = {
         /**
@@ -454,41 +493,80 @@
         },
 
         onReady: function(cb) {
-            const process = require("process");
-
             const solver = new Z3Solver();
             solver.on("output", (expr) => {
                 console.log(expr);
             });
 
             this.path = new ExecutionPath();
-            this.inputs = {};
 
-            function parseVarName(varName) {
-                // Slice off the 'var' prefix.
-                return varName.slice(3);
+            function solvePath(path, callback) {
+                const variables = collectVariables(_.map(path.constraints, "expr"));
+
+                solver.once("output", (status) => {
+                    if (status === "sat") {
+                        solver.submitCommands([
+                            ["get-value", _.map(variables, (v) => v.toFormula())]
+                        ]);
+                        solver.pop(1);
+
+                        solver.once("output", (assignment) => {
+                            const solution = {};
+                            for (let j = 0; j < assignment.length; j++) {
+                                const name = assignment[j][0],
+                                    value = assignment[j][1];
+                                solution[parseVarName(name)] = parseVal(value);
+                            }
+                            callback(status, solution);
+                        });
+                    } else {
+                        callback(status);
+                        solver.pop(1);
+                    }
+                });
+
+                solver.push(1);
+                solver.submitCommands(generateSolverCommands(path, variables));
             }
 
-            function parseVal(value) {
-                const type = value[0],
-                    contents = value[1];
-                switch (type) {
-                    case "undefined":
-                        return undefined;
-                    case "null":
-                        return null;
-                    case "Boolean":
-                        return contents === "true";
-                    case "Num":
-                        return parseFloat(contents, 10);
-                    case "Str":
-                        return contents;
-                    default:
-                        throw new Error("invalid value type " + type);
+            const inputQueue = [{}];
+            const pathSet = new ExecutionPathSet();
+
+            function generateInputs(oldPath, callback, i) {
+                if (i >= oldPath.constraints.length) {
+                    callback();
+                    return;
+                }
+
+                const newPath = new ExecutionPath(oldPath.constraints.slice(0, i + 1));
+                newPath.constraints[i].value = !newPath.constraints[i].value;
+
+                if (!pathSet.has(newPath)) {
+                    pathSet.add(newPath);
+                    solvePath(newPath, (status, solution) => {
+                        if (solution !== undefined) {
+                            inputQueue.push(solution);
+                        }
+                        // Reset the value since it's the same object as in
+                        // oldPath.
+                        newPath.constraints[i].value = !newPath.constraints[i].value;
+
+                        generateInputs(oldPath, callback, i + 1);
+                    });
+                } else {
+                    generateInputs(oldPath, callback, i + 1);
                 }
             }
 
+            const process = require("process");
+
             const runAnalysis = (n) => {
+                if (inputQueue.length === 0) {
+                    console.log("finished: no more constraints to solve");
+                    solver.close();
+                    return;
+                }
+
                 if (n <= 0) {
                     console.log("finished: reached iteration limit");
                     solver.close();
@@ -496,43 +574,15 @@
                 }
 
                 this.path.clear();
+                this.inputs = inputQueue.shift();
                 cb();
+                pathSet.add(this.path);
 
                 // Delete the cached copy of the script so it can be reloaded.
                 const input_filename = process.argv[1];
                 delete require.cache[require.resolve(input_filename)];
 
-                if (this.path.isEmpty()) {
-                    console.log("finished: no more constraints to solve");
-                    solver.close();
-                    return;
-                }
-
-                const commands = generateSolverCommands(this.path.constraints, 0);
-
-                solver.push(1);
-                solver.submitCommands(commands);
-                solver.pop(1);
-
-                solver.once("output", (expr) => {
-                    if (expr === "sat") {
-                        solver.once("output", (expr) => {
-                            for (let j = 0; j < expr.length; j++) {
-                                const name = expr[j][0],
-                                    value = expr[j][1];
-                                this.inputs[parseVarName(name)] = parseVal(value);
-                            }
-
-                            runAnalysis(n - 1);
-                        });
-                    } else if (expr === "unsat") {
-                        // Absorb the error message from the (get-value) command
-                        // before looping to test again.
-                        solver.once("output", () => runAnalysis(n - 1));
-                    } else {
-                        throw new Error(`got ${expr} instead of sat or unsat`);
-                    }
-                });
+                generateInputs(this.path, () => runAnalysis(n - 1), 0);
             };
 
             runAnalysis(MAX_INPUTS);
