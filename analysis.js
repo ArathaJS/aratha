@@ -474,6 +474,12 @@
                 const type = value[0],
                     contents = value[1];
                 switch (type) {
+                    case "undefined":
+                        return undefined;
+                    case "null":
+                        return null;
+                    case "Boolean":
+                        return contents === "true";
                     case "Num":
                         return parseFloat(contents, 10);
                     case "Str":
