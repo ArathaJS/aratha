@@ -24,8 +24,8 @@
     (ite (is-undefined x) "undefined"
     (ite (is-null x) "null"
     (ite (is-Boolean x) (ite (bool x) "true" "false")
-    (ite (is-Num x) (int.to.str (to_int (num x)))
-    "FOOBARBAZ"))))))
+    ;(ite (is-Num x) (int.to.str (num x))
+    "FOOBARBAZ")))))
 
 (define-fun js.ToNumber ((x Val)) Int
     (ite (is-Num x) (num x)
