@@ -25,15 +25,12 @@
         return "(" + _.join(_.map(expr, stringifySExpression), " ") + ")";
     }
 
-    function SymbolicValue() {}
+    class SymbolicValue {
+        constructor() {}
 
-    SymbolicValue.prototype.eval = function() {
-        return undefined;
-    };
-
-    SymbolicValue.prototype.visit = function(visitor) {
-        visitor(this);
-    };
+        eval() { return undefined; }
+        visit(visitor) { visitor(this); }
+    }
 
     function escapeSMTString(s) {
         return '"' + s.replace('"', '""') + '"';
@@ -64,14 +61,50 @@
         }
     }
 
-    function Type(types) {
-        if (typeof types === "undefined") {
-            types = Type.TOP;
+    class Type {
+        constructor(types) {
+            if (types === undefined) {
+                types = Type.TOP;
+            }
+
+            this.types = types;
         }
 
-        this.types = types;
+        requireTypes(types) { this.types &= types; }
+        forbidTypes(types) { this.types &= ~types; }
+
+        intersection(type) { return new Type(this.types & type.types); }
+
+        valid() { return this.types !== Type.BOTTOM; }
+        trivial() { return this.types === Type.TOP; }
+
+        has(types) { return (this.types & types) !== Type.BOTTOM; }
+
+        constraintFor(value) {
+            const valFormula = valueToFormula(value);
+            const negative = [];
+
+            const predicates = Type.predicates;
+
+            for (const k in predicates) {
+                if (predicates.hasOwnProperty(k)) {
+                    if (!this.has(k)) {
+                        negative.push(predicates[k]);
+                    }
+                }
+            }
+
+            if (negative.length > 0) {
+                const negativeFormula = _.map(negative, function(x) {
+                    return [x, valFormula];
+                });
+                negativeFormula.unshift("or");
+                return ["not", negativeFormula];
+            } else {
+                return "true";
+            }
+        }
     }
-    Type.prototype.constructor = Type;
 
     Type.UNDEFINED = 1;
     Type.NULL = 1 << 1;
@@ -92,245 +125,190 @@
         32: "is-Object"
     };
 
-    Type.prototype.requireTypes = function(types) {
-        this.types &= types;
-    };
+    class Variable extends SymbolicValue {
+        constructor(name, concreteValue, type) {
+            super();
 
-    Type.prototype.forbidTypes = function(types) {
-        this.types &= ~types;
-    };
+            this.name = name;
+            this.concreteValue = concreteValue;
+            this.type = type || new Type();
+        }
 
-    Type.prototype.intersection = function(type) {
-        return new Type(this.types & type.types);
-    };
+        eval() { return this.concreteValue; }
+        toFormula() { return this.name; }
+        declarationFormula() { return ["declare-const", this.name, "Val"]; }
+    }
 
-    Type.prototype.valid = function() {
-        return this.types !== Type.BOTTOM;
-    };
+    class Binary extends SymbolicValue {
+        constructor(iid, op, left, right) {
+            super();
+            this.iid = J$.getGlobalIID(iid);
+            this.op = op;
+            this.left = left;
+            this.right = right;
+        }
 
-    Type.prototype.trivial = function() {
-        return this.types === Type.TOP;
-    };
+        eval() {
+            const op = this.op;
+            let left = this.left,
+                right = this.right,
+                result;
 
-    Type.prototype.has = function(types) {
-        return (this.types & types) !== Type.BOTTOM;
-    };
+            if (left instanceof SymbolicValue) {
+                left = left.eval();
+            }
 
-    Type.prototype.constraintFor = function(value) {
-        const valFormula = valueToFormula(value);
-        const negative = [];
+            if (right instanceof SymbolicValue) {
+                right = right.eval();
+            }
 
-        const predicates = Type.predicates;
+            switch (op) {
+                case "+":
+                    result = left + right;
+                    break;
+                case "-":
+                    result = left - right;
+                    break;
+                case "*":
+                    result = left * right;
+                    break;
+                case "/":
+                    result = left / right;
+                    break;
+                case "%":
+                    result = left % right;
+                    break;
+                case "<<":
+                    result = left << right;
+                    break;
+                case ">>":
+                    result = left >> right;
+                    break;
+                case ">>>":
+                    result = left >>> right;
+                    break;
+                case "<":
+                    result = left < right;
+                    break;
+                case ">":
+                    result = left > right;
+                    break;
+                case "<=":
+                    result = left <= right;
+                    break;
+                case ">=":
+                    result = left >= right;
+                    break;
+                case "==":
+                    result = left == right;
+                    break;
+                case "!=":
+                    result = left != right;
+                    break;
+                case "===":
+                    result = left === right;
+                    break;
+                case "!==":
+                    result = left !== right;
+                    break;
+                case "&":
+                    result = left & right;
+                    break;
+                case "|":
+                    result = left | right;
+                    break;
+                case "^":
+                    result = left ^ right;
+                    break;
+                case "delete":
+                    result = delete left[right];
+                    break;
+                case "instanceof":
+                    result = left instanceof right;
+                    break;
+                case "in":
+                    result = left in right;
+                    break;
+                default:
+                    throw new Error(op + " at " + this.iid + " not found");
+            }
 
-        for (const k in predicates) {
-            if (predicates.hasOwnProperty(k)) {
-                if (!this.has(k)) {
-                    negative.push(predicates[k]);
-                }
+            return result;
+        }
+
+        visit(visitor) {
+            visitor(this);
+
+            visitor(this.left);
+            if (this.left instanceof SymbolicValue) {
+                this.left.visit(visitor);
+            }
+
+            visitor(this.right);
+            if (this.right instanceof SymbolicValue) {
+                this.right.visit(visitor);
             }
         }
 
-        if (negative.length > 0) {
-            const negativeFormula = _.map(negative, function(x) {
-                return [x, valFormula];
-            });
-            negativeFormula.unshift("or");
-            return ["not", negativeFormula];
-        } else {
-            return "true";
+        toFormula() {
+            return ["js." + this.op, valueToFormula(this.left), valueToFormula(this.right)];
         }
-    };
-
-    function Variable(name, concreteValue, type) {
-        this.name = name;
-        this.concreteValue = concreteValue;
-        this.type = type || new Type();
     }
-    Variable.prototype = Object.create(SymbolicValue.prototype);
-    Variable.prototype.constructor = Variable;
 
-    Variable.prototype.eval = function() {
-        return this.concreteValue;
-    };
+    class Unary extends SymbolicValue {
+        constructor(iid, op, expr) {
+            super();
+            this.iid = J$.getGlobalIID(iid);
+            this.op = op;
+            this.expr = expr;
+        }
 
-    Variable.prototype.toFormula = function() {
-        return this.name;
-    };
+        eval() {
+            const op = this.op;
+            let expr = this.expr,
+                result;
 
-    Variable.prototype.declarationFormula = function() {
-        return ["declare-const", this.name, "Val"];
-    };
+            if (expr instanceof SymbolicValue) {
+                expr = expr.eval();
+            }
 
-    function Binary(iid, op, left, right) {
-        this.iid = J$.getGlobalIID(iid);
-        this.op = op;
-        this.left = left;
-        this.right = right;
+            switch (op) {
+                case "+":
+                    result = +expr;
+                    break;
+                case "-":
+                    result = -expr;
+                    break;
+                case "~":
+                    result = ~expr;
+                    break;
+                case "!":
+                    result = !expr;
+                    break;
+                case "typeof":
+                    result = typeof expr;
+                    break;
+                case "void":
+                    result = void(expr);
+                    break;
+                default:
+                    throw new Error(op + " at " + this.iid + " not found");
+            }
+
+            return result;
+        }
+
+        visit(visitor) {
+            visitor(this);
+            visitor(this.expr);
+
+            if (this.expr instanceof SymbolicValue) {
+                this.expr.visit(visitor);
+            }
+        }
+
+        toFormula() { return ["js." + this.op, valueToFormula(this.expr)]; }
     }
-    Binary.prototype = Object.create(SymbolicValue.prototype);
-    Binary.prototype.constructor = Binary;
-
-    Binary.prototype.eval = function() {
-        const op = this.op;
-        let left = this.left,
-            right = this.right,
-            result;
-
-        if (left instanceof SymbolicValue) {
-            left = left.eval();
-        }
-
-        if (right instanceof SymbolicValue) {
-            right = right.eval();
-        }
-
-        switch (op) {
-            case "+":
-                result = left + right;
-                break;
-            case "-":
-                result = left - right;
-                break;
-            case "*":
-                result = left * right;
-                break;
-            case "/":
-                result = left / right;
-                break;
-            case "%":
-                result = left % right;
-                break;
-            case "<<":
-                result = left << right;
-                break;
-            case ">>":
-                result = left >> right;
-                break;
-            case ">>>":
-                result = left >>> right;
-                break;
-            case "<":
-                result = left < right;
-                break;
-            case ">":
-                result = left > right;
-                break;
-            case "<=":
-                result = left <= right;
-                break;
-            case ">=":
-                result = left >= right;
-                break;
-            case "==":
-                result = left == right;
-                break;
-            case "!=":
-                result = left != right;
-                break;
-            case "===":
-                result = left === right;
-                break;
-            case "!==":
-                result = left !== right;
-                break;
-            case "&":
-                result = left & right;
-                break;
-            case "|":
-                result = left | right;
-                break;
-            case "^":
-                result = left ^ right;
-                break;
-            case "delete":
-                result = delete left[right];
-                break;
-            case "instanceof":
-                result = left instanceof right;
-                break;
-            case "in":
-                result = left in right;
-                break;
-            default:
-                throw new Error(op + " at " + this.iid + " not found");
-        }
-
-        return result;
-    };
-
-    Binary.prototype.visit = function(visitor) {
-        visitor(this);
-
-        visitor(this.left);
-        if (this.left instanceof SymbolicValue) {
-            this.left.visit(visitor);
-        }
-
-        visitor(this.right);
-        if (this.right instanceof SymbolicValue) {
-            this.right.visit(visitor);
-        }
-    };
-
-    Binary.prototype.toFormula = function() {
-        return ["js." + this.op, valueToFormula(this.left), valueToFormula(this.right)];
-    };
-
-    function Unary(iid, op, expr) {
-        this.iid = J$.getGlobalIID(iid);
-        this.op = op;
-        this.expr = expr;
-    }
-    Unary.prototype = Object.create(SymbolicValue.prototype);
-    Unary.prototype.constructor = Unary;
-
-    Unary.prototype.eval = function() {
-        const op = this.op;
-        let expr = this.expr,
-            result;
-
-        if (expr instanceof SymbolicValue) {
-            expr = expr.eval();
-        }
-
-        switch (op) {
-            case "+":
-                result = +expr;
-                break;
-            case "-":
-                result = -expr;
-                break;
-            case "~":
-                result = ~expr;
-                break;
-            case "!":
-                result = !expr;
-                break;
-            case "typeof":
-                result = typeof expr;
-                break;
-            case "void":
-                result = void(expr);
-                break;
-            default:
-                throw new Error(op + " at " + this.iid + " not found");
-        }
-
-        return result;
-    };
-
-    Unary.prototype.visit = function(visitor) {
-        visitor(this);
-        visitor(this.expr);
-
-        if (this.expr instanceof SymbolicValue) {
-            this.expr.visit(visitor);
-        }
-    };
-
-    Unary.prototype.toFormula = function() {
-        return ["js." + this.op, valueToFormula(this.expr)];
-    };
 
     function neg(iid, expr) {
         return new Unary(iid, "!", expr);
