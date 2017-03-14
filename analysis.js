@@ -22,6 +22,14 @@
 
         eval() { return undefined; }
         visit(visitor) { visitor(this); }
+
+        _visitChild(child, visitor) {
+            if (child instanceof SymbolicValue) {
+                child.visit(visitor);
+            } else {
+                visitor(child);
+            }
+        }
     }
 
     function escapeSMTString(s) {
@@ -228,16 +236,8 @@
 
         visit(visitor) {
             visitor(this);
-
-            visitor(this.left);
-            if (this.left instanceof SymbolicValue) {
-                this.left.visit(visitor);
-            }
-
-            visitor(this.right);
-            if (this.right instanceof SymbolicValue) {
-                this.right.visit(visitor);
-            }
+            this._visitChild(this.left, visitor);
+            this._visitChild(this.right, visitor);
         }
 
         toFormula() {
@@ -290,11 +290,7 @@
 
         visit(visitor) {
             visitor(this);
-            visitor(this.expr);
-
-            if (this.expr instanceof SymbolicValue) {
-                this.expr.visit(visitor);
-            }
+            this._visitChild(this.expr, visitor);
         }
 
         toFormula() { return ["js." + this.op, valueToFormula(this.expr)]; }
