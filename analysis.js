@@ -1,15 +1,15 @@
+/* global J$ */
+
 (function(sandbox) {
     "use strict";
 
-    var util = require('util');
-    var child_process = require('child_process');
-    var _ = require('lodash');
-    const EventEmitter = require('events');
-    const fs = require('fs');
+    const child_process = require("child_process");
+    const _ = require("lodash");
+    const EventEmitter = require("events");
+    const fs = require("fs");
 
-    var branches = {};
-    var inputs = {};
-    var constraints = [];
+    const inputs = {};
+    const constraints = [];
 
     function addConstraint(val) {
         if (!_.some(constraints, _.partial(_.isEqual, val))) {
@@ -25,15 +25,18 @@
         return "(" + _.join(_.map(expr, stringifySExpression), " ") + ")";
     }
 
-    function SymbolicValue() {
-    }
+    function SymbolicValue() {}
 
     SymbolicValue.prototype.eval = function() {
         return undefined;
-    }
+    };
 
     SymbolicValue.prototype.visit = function(visitor) {
         visitor(this);
+    };
+
+    function escapeSMTString(s) {
+        return '"' + s.replace('"', '""') + '"';
     }
 
     function valueToFormula(value) {
@@ -50,7 +53,7 @@
                 return ["Boolean", value.toString()];
             case "number":
                 if (value >= 0) {
-                    return ["Num", value.toFixed(19)]
+                    return ["Num", value.toFixed(19)];
                 } else {
                     return ["Num", ["-", (-value).toFixed(19)]];
                 }
@@ -59,7 +62,7 @@
             default:
                 throw new Error("values of type " + typeof value + " not implemented");
         }
-}
+    }
 
     function Type(types) {
         if (typeof types === "undefined") {
@@ -91,61 +94,35 @@
 
     Type.prototype.requireTypes = function(types) {
         this.types &= types;
-    }
+    };
 
     Type.prototype.forbidTypes = function(types) {
         this.types &= ~types;
-    }
+    };
 
     Type.prototype.intersection = function(type) {
         return new Type(this.types & type.types);
-    }
+    };
 
     Type.prototype.valid = function() {
         return this.types !== Type.BOTTOM;
-    }
+    };
 
     Type.prototype.trivial = function() {
         return this.types === Type.TOP;
-    }
+    };
 
     Type.prototype.has = function(types) {
         return (this.types & types) !== Type.BOTTOM;
-    }
-
-/*    Type.prototype.constraintFor = function(value) {
-        var valFormula = valueToFormula(value),
-            positive = [], negative = [];
-
-        var predicates = this.predicates;
-
-        for (var k in predicates) {
-            if (predicates.hasOwnProperty(k)) {
-                if (this.has(k)) {
-                    positive.push(predicates[k]);
-                } else {
-                    negative.push(predicates[k]);
-                }
-            }
-        }
-
-        var positiveFormula = _.map(positive, function(x) { return [x, valFormula] });
-        positiveFormula.unshift("or");
-
-        var negativeFormula = _.map(negative, function(x) { return [x, valFormula]});
-        negativeFormula.unshift("or");
-
-        return ["and", positiveFormula, ["not", negativeFormula]];
-    }
-*/
+    };
 
     Type.prototype.constraintFor = function(value) {
-        var valFormula = valueToFormula(value),
-            negative = [];
+        const valFormula = valueToFormula(value);
+        const negative = [];
 
-        var predicates = Type.predicates;
+        const predicates = Type.predicates;
 
-        for (var k in predicates) {
+        for (const k in predicates) {
             if (predicates.hasOwnProperty(k)) {
                 if (!this.has(k)) {
                     negative.push(predicates[k]);
@@ -154,13 +131,15 @@
         }
 
         if (negative.length > 0) {
-            var negativeFormula = _.map(negative, function(x) { return [x, valFormula]});
+            const negativeFormula = _.map(negative, function(x) {
+                return [x, valFormula];
+            });
             negativeFormula.unshift("or");
             return ["not", negativeFormula];
         } else {
             return "true";
         }
-    }
+    };
 
     function Variable(name, concreteValue, type) {
         this.name = name;
@@ -172,20 +151,15 @@
 
     Variable.prototype.eval = function() {
         return this.concreteValue;
-    }
+    };
 
     Variable.prototype.toFormula = function() {
         return this.name;
-    }
+    };
 
     Variable.prototype.declarationFormula = function() {
         return ["declare-const", this.name, "Val"];
-    }
-
-    function neg(iid, expr)
-    {
-        return new Unary(iid, '!', expr);
-    }
+    };
 
     function Binary(iid, op, left, right) {
         this.iid = J$.getGlobalIID(iid);
@@ -197,8 +171,8 @@
     Binary.prototype.constructor = Binary;
 
     Binary.prototype.eval = function() {
-        var op = this.op,
-            left = this.left,
+        const op = this.op;
+        let left = this.left,
             right = this.right,
             result;
 
@@ -279,11 +253,10 @@
                 break;
             default:
                 throw new Error(op + " at " + this.iid + " not found");
-                break;
         }
 
         return result;
-    }
+    };
 
     Binary.prototype.visit = function(visitor) {
         visitor(this);
@@ -297,11 +270,11 @@
         if (this.right instanceof SymbolicValue) {
             this.right.visit(visitor);
         }
-    }
+    };
 
     Binary.prototype.toFormula = function() {
         return ["js." + this.op, valueToFormula(this.left), valueToFormula(this.right)];
-    }
+    };
 
     function Unary(iid, op, expr) {
         this.iid = J$.getGlobalIID(iid);
@@ -312,7 +285,8 @@
     Unary.prototype.constructor = Unary;
 
     Unary.prototype.eval = function() {
-        var expr = this.expr,
+        const op = this.op;
+        let expr = this.expr,
             result;
 
         if (expr instanceof SymbolicValue) {
@@ -340,11 +314,10 @@
                 break;
             default:
                 throw new Error(op + " at " + this.iid + " not found");
-                break;
         }
 
         return result;
-    }
+    };
 
     Unary.prototype.visit = function(visitor) {
         visitor(this);
@@ -353,10 +326,14 @@
         if (this.expr instanceof SymbolicValue) {
             this.expr.visit(visitor);
         }
-    }
+    };
 
     Unary.prototype.toFormula = function() {
         return ["js." + this.op, valueToFormula(this.expr)];
+    };
+
+    function neg(iid, expr) {
+        return new Unary(iid, "!", expr);
     }
 
     class SExprParser {
@@ -368,8 +345,8 @@
         }
 
         parse(str, cb) {
-            for(let i = 0; i < str.length; ++i) {
-                let expr = this._feedChar(str[i]);
+            for (let i = 0; i < str.length; ++i) {
+                const expr = this._feedChar(str[i]);
                 if (expr !== null && this._levels.length === 0) {
                     cb(expr);
                 }
@@ -378,12 +355,12 @@
 
         _feedChar(char) {
             if (this._parsingString) {
-                if (char === '"') {
+                if (char === "\"") {
                     this._numQuotes++;
 
                     if (this._numQuotes >= 2) {
                         this._numQuotes -= 2;
-                        this._curtok += '"';
+                        this._curtok += "\"";
                     }
 
                     return null;
@@ -401,7 +378,7 @@
                 }
             }
 
-            switch(char) {
+            switch (char) {
                 case "\r":
                 case "\n":
                 case "\t":
@@ -413,7 +390,7 @@
                 case ")":
                     if (this._levels.length >= 1) {
                         this._finishToken();
-                        let expr = this._levels.pop();
+                        const expr = this._levels.pop();
                         if (this._levels.length > 0) {
                             _.last(this._levels).push(expr);
                         } else {
@@ -423,7 +400,7 @@
                         throw new Error("parse error: too many close-parens");
                     }
                     break;
-                case '"':
+                case "\"":
                     this._parsingString = true;
                     this._curtok = "";
                     break;
@@ -439,7 +416,7 @@
         }
 
         _finishToken() {
-            let token = this._curtok;
+            const token = this._curtok;
             if (token === null)
                 return null;
             this._curtok = null;
@@ -454,9 +431,9 @@
     }
 
     function collectVariables(expr) {
-        var variables = {};
+        const variables = {};
         expr.visit(function(expr) {
-            if(expr instanceof Variable) {
+            if (expr instanceof Variable) {
                 variables[expr.name] = expr;
             }
         });
@@ -464,10 +441,10 @@
     }
 
     function generateSolverCommands(constraints) {
-        var commands = [];
-        var variables = {};
+        const commands = [];
+        const variables = {};
 
-        for (var i = 0; i < constraints.length; ++i) {
+        for (let i = 0; i < constraints.length; ++i) {
             Object.assign(variables, collectVariables(constraints[i]));
         }
 
@@ -478,32 +455,34 @@
             }
         });
 
-        for (var i = 0; i < constraints.length; ++i) {
+        for (let i = 0; i < constraints.length; ++i) {
             commands.push(["assert", constraints[i].toFormula()]);
         }
 
         commands.push(["check-sat"]);
-        commands.push(["get-value", _.map(variables, function(v) { return v.toFormula(); })]);
+        commands.push(["get-value", _.map(variables, function(v) {
+            return v.toFormula();
+        })]);
         return commands;
     }
 
     const MAX_INPUTS = 10;
-    const SOLVER_PATH = '../../z3/z3-4.5.0-x64-win/bin/z3';
-    const ES_THEORY_PATH = 'ecmascript.smt2';
+    const SOLVER_PATH = "../../z3/z3-4.5.0-x64-win/bin/z3";
+    const ES_THEORY_PATH = "ecmascript.smt2";
 
     class Z3Solver extends EventEmitter {
         constructor() {
             super();
 
-            let z3 = child_process.spawn(SOLVER_PATH, ['-smt2', '-in']);
+            const z3 = child_process.spawn(SOLVER_PATH, ["-smt2", "-in"]);
             z3.stdin.write(fs.readFileSync(ES_THEORY_PATH));
 
-            z3.stdout.setEncoding('utf8');
+            z3.stdout.setEncoding("utf8");
 
-            let parser = new SExprParser();
-            z3.stdout.on('data', (data) => {
+            const parser = new SExprParser();
+            z3.stdout.on("data", (data) => {
                 parser.parse(data, (expr) => {
-                    this.emit('output', expr);
+                    this.emit("output", expr);
                 });
             });
 
@@ -511,15 +490,19 @@
         }
 
         push(n) {
-            this.submitCommands([["push", n.toString()]]);
+            this.submitCommands([
+                ["push", n.toString()]
+            ]);
         }
 
         pop(n) {
-            this.submitCommands([["pop", n.toString()]]);
+            this.submitCommands([
+                ["pop", n.toString()]
+            ]);
         }
 
         submitCommands(commands) {
-            var commandString = _.map(commands, stringifySExpression).join("\n");
+            const commandString = _.map(commands, stringifySExpression).join("\n");
             console.log(commandString);
             this.process.stdin.write(commandString);
         }
@@ -531,122 +514,128 @@
 
     J$.analysis = {
 
-    /**
-     * This callback is called after a condition check before branching.
-     * Branching can happen in various statements
-     * including if-then-else, switch-case, while, for, ||, &&, ?:.
-     *
-     * @param {number} iid - Static unique instruction identifier of this callback
-     * @param {*} result - The value of the conditional expression
-     * @returns {{result: *}|undefined} - If an object is returned, the result of
-     * the conditional expression is replaced with the value stored in the
-     * <tt>result</tt> property of the object.
-     */
-     conditional : function (iid, result) {
-        if (result instanceof SymbolicValue) {
-            var value = result.eval();
-            addConstraint(value ? neg(iid, result) : result);
-            return {result: value};
-        }
-    },
-
-    binaryPre: function (iid, op, left, right, isOpAssign, isSwitchCaseComparison, isComputed) {
-        if ((left instanceof SymbolicValue) || (right instanceof SymbolicValue)) {
-            return {op: op, left: left, right: right, skip: true};
-        }
-    },
-
-    binary: function (iid, op, left, right, result, isOpAssign, isSwitchCaseComparison, isComputed) {
-        if ((left instanceof SymbolicValue) || (right instanceof SymbolicValue)) {
-            return {result: new Binary(iid, op, left, right)};
-        }
-    },
-
-    invokeFunPre: function (iid, f, base, args, isConstructor, isMethod, functionIid, functionSid) {
-        if (f === sandbox.readInput) {
-            return {skip: true, f: f, base: base, args: args};
-        }
-    },
-
-    invokeFun: function (iid, f, base, args, result, isConstructor, isMethod, functionIid, functionSid) {
-        if (f === sandbox.readInput) {
-            //var giid = J$.sid + "_" + iid;
-            var giid = iid;
-            return {result: new Variable("var" + giid, inputs[giid])};
-        }
-    },
-
-    onReady: function(cb) {
-        var input_filename = './example.js';
-        var solver = new Z3Solver();
-        solver.on('output', function(expr) {
-            console.log(expr);
-        });
-
-        function parseVarName(varName) {
-            // Slice off the 'var' prefix.
-            return varName.slice(3);
-        }
-
-        function parseVal(value) {
-            let type = value[0], contents = value[1];
-            switch(type) {
-                case "Num":
-                return parseFloat(contents, 10);
-                default:
-                throw new Error("invalid value type " + type);
+        /**
+         * This callback is called after a condition check before branching.
+         * Branching can happen in various statements
+         * including if-then-else, switch-case, while, for, ||, &&, ?:.
+         *
+         * @param {number} iid - Static unique instruction identifier of this callback
+         * @param {*} result - The value of the conditional expression
+         * @returns {{result: *}|undefined} - If an object is returned, the result of
+         * the conditional expression is replaced with the value stored in the
+         * <tt>result</tt> property of the object.
+         */
+        conditional: function(iid, result) {
+            if (result instanceof SymbolicValue) {
+                const value = result.eval();
+                addConstraint(value ? neg(iid, result) : result);
+                return { result: value };
             }
-        }
+        },
 
-        function runAnalysis(n) {
-            if (n <= 0) {
-                console.log("finished: reached iteration limit");
-                solver.close();
-                return;
+        binaryPre: function(iid, op, left, right) {
+            if ((left instanceof SymbolicValue) || (right instanceof SymbolicValue)) {
+                return { op: op, left: left, right: right, skip: true };
             }
+        },
 
-            delete require.cache[require.resolve(input_filename)];
-            constraints.length = 0;
-            cb();
-
-            if (constraints.length === 0) {
-                console.log("finished: no more constraints to solve");
-                solver.close();
-                return;
+        binary: function(iid, op, left, right) {
+            if ((left instanceof SymbolicValue) || (right instanceof SymbolicValue)) {
+                return { result: new Binary(iid, op, left, right) };
             }
+        },
 
-            let commands = generateSolverCommands(constraints);
+        invokeFunPre: function(iid, f, base, args) {
+            if (f === sandbox.readInput) {
+                return { f: f, base: base, args: args, skip: true };
+            }
+        },
 
-            solver.push(1)
-            solver.submitCommands(commands);
-            solver.pop(1);
+        invokeFun: function(iid, f) {
+            if (f === sandbox.readInput) {
+                //var giid = J$.sid + "_" + iid;
+                const giid = iid;
+                return { result: new Variable("var" + giid, inputs[giid]) };
+            }
+        },
 
-            solver.once('output', (expr) => {
-                if (expr === 'sat') {
-                    solver.once('output', (expr) => {
-                        for(let j = 0; j < expr.length; j++) {
-                            let name = expr[j][0], value = expr[j][1];
-                            inputs[parseVarName(name)] = parseVal(value);
-                        }
+        onReady: function(cb) {
+            const process = require("process");
 
-                        runAnalysis(n - 1);
-                    });
-                } else if (expr === 'unsat') {
-                    // Absorb the error message from the (get-value) command
-                    // before looping to test again.
-                    solver.once('output', () => runAnalysis(n - 1));
-                } else {
-                    throw new Error(`got ${expr} instead of sat or unsat`);
-                }
+            const solver = new Z3Solver();
+            solver.on("output", function(expr) {
+                console.log(expr);
             });
+
+            function parseVarName(varName) {
+                // Slice off the 'var' prefix.
+                return varName.slice(3);
+            }
+
+            function parseVal(value) {
+                const type = value[0],
+                    contents = value[1];
+                switch (type) {
+                    case "Num":
+                        return parseFloat(contents, 10);
+                    default:
+                        throw new Error("invalid value type " + type);
+                }
+            }
+
+            function runAnalysis(n) {
+                if (n <= 0) {
+                    console.log("finished: reached iteration limit");
+                    solver.close();
+                    return;
+                }
+
+                constraints.length = 0;
+                cb();
+
+                // Delete the cached copy of the script so it can be reloaded.
+                const input_filename = process.argv[1];
+                delete require.cache[require.resolve(input_filename)];
+
+                if (constraints.length === 0) {
+                    console.log("finished: no more constraints to solve");
+                    solver.close();
+                    return;
+                }
+
+                const commands = generateSolverCommands(constraints);
+
+                solver.push(1);
+                solver.submitCommands(commands);
+                solver.pop(1);
+
+                solver.once("output", (expr) => {
+                    if (expr === "sat") {
+                        solver.once("output", (expr) => {
+                            for (let j = 0; j < expr.length; j++) {
+                                const name = expr[j][0],
+                                    value = expr[j][1];
+                                inputs[parseVarName(name)] = parseVal(value);
+                            }
+
+                            runAnalysis(n - 1);
+                        });
+                    } else if (expr === "unsat") {
+                        // Absorb the error message from the (get-value) command
+                        // before looping to test again.
+                        solver.once("output", () => runAnalysis(n - 1));
+                    } else {
+                        throw new Error(`got ${expr} instead of sat or unsat`);
+                    }
+                });
+            }
+
+            runAnalysis(MAX_INPUTS);
         }
+    };
 
-        runAnalysis(MAX_INPUTS);
-    }
-};
-
-sandbox.readInput = function(concreteValue) {
-    throw new Error("invalid call of readInput");
-};
+    sandbox.readInput = function() {
+        throw new Error("invalid call of readInput");
+    };
 
 }(J$));

@@ -1,3 +1,5 @@
+/* global J$ */
+
 function foo() {
     console.log("foo");
 }
