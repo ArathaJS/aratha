@@ -9,12 +9,25 @@
     const fs = require("fs");
 
     const inputs = {};
-    const constraints = [];
 
-    function addConstraint(val) {
-        if (!_.some(constraints, _.partial(_.isEqual, val))) {
-            constraints.push(val);
+    class ExecutionPath {
+        constructor() {
+            this.constraints = [];
         }
+
+        isEmpty() { return this.constraints.length === 0; }
+
+        addConstraint(expr, concreteValue) {
+            if (!_.some(this.constraints,
+                    (other) => _.isEqual(expr, other.expr))) {
+                this.constraints.push({
+                    expr: expr,
+                    value: concreteValue
+                });
+            }
+        }
+
+        clear() { this.constraints.length = 0; }
     }
 
     class SymbolicValue {
@@ -296,10 +309,6 @@
         toFormula() { return ["js." + this.op, valueToFormula(this.expr)]; }
     }
 
-    function neg(iid, expr) {
-        return new Unary(iid, "!", expr);
-    }
-
     const MAX_INPUTS = 10;
     const SOLVER_PATH = "../../z3/z3-4.5.0-x64-win/bin/z3";
     const ES_THEORY_PATH = "ecmascript.smt2";
@@ -359,12 +368,12 @@
         return variables;
     }
 
-    function generateSolverCommands(constraints) {
+    function generateSolverCommands(constraints, negateIndex) {
         const commands = [];
         const variables = {};
 
         for (let i = 0; i < constraints.length; ++i) {
-            Object.assign(variables, collectVariables(constraints[i]));
+            Object.assign(variables, collectVariables(constraints[i].expr));
         }
 
         _.forEach(variables, (v) => {
@@ -375,7 +384,11 @@
         });
 
         for (let i = 0; i < constraints.length; ++i) {
-            commands.push(["assert", constraints[i].toFormula()]);
+            if (i === negateIndex) {
+                commands.push(["assert", ["not", constraints[i].expr.toFormula()]]);
+            } else {
+                commands.push(["assert", constraints[i].expr.toFormula()]);
+            }
         }
 
         commands.push(["check-sat"]);
@@ -385,7 +398,6 @@
 
 
     J$.analysis = {
-
         /**
          * This callback is called after a condition check before branching.
          * Branching can happen in various statements
@@ -400,7 +412,7 @@
         conditional: function(iid, result) {
             if (result instanceof SymbolicValue) {
                 const value = result.eval();
-                addConstraint(value ? neg(iid, result) : result);
+                this.path.addConstraint(result, value);
                 return { result: value };
             }
         },
@@ -439,6 +451,8 @@
                 console.log(expr);
             });
 
+            this.path = new ExecutionPath();
+
             function parseVarName(varName) {
                 // Slice off the 'var' prefix.
                 return varName.slice(3);
@@ -450,32 +464,34 @@
                 switch (type) {
                     case "Num":
                         return parseFloat(contents, 10);
+                    case "Str":
+                        return contents;
                     default:
                         throw new Error("invalid value type " + type);
                 }
             }
 
-            function runAnalysis(n) {
+            const runAnalysis = (n) => {
                 if (n <= 0) {
                     console.log("finished: reached iteration limit");
                     solver.close();
                     return;
                 }
 
-                constraints.length = 0;
+                this.path.clear();
                 cb();
 
                 // Delete the cached copy of the script so it can be reloaded.
                 const input_filename = process.argv[1];
                 delete require.cache[require.resolve(input_filename)];
 
-                if (constraints.length === 0) {
+                if (this.path.isEmpty()) {
                     console.log("finished: no more constraints to solve");
                     solver.close();
                     return;
                 }
 
-                const commands = generateSolverCommands(constraints);
+                const commands = generateSolverCommands(this.path.constraints, 0);
 
                 solver.push(1);
                 solver.submitCommands(commands);
@@ -500,7 +516,7 @@
                         throw new Error(`got ${expr} instead of sat or unsat`);
                     }
                 });
-            }
+            };
 
             runAnalysis(MAX_INPUTS);
         }
