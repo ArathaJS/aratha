@@ -95,9 +95,7 @@
             }
 
             if (negative.length > 0) {
-                const negativeFormula = _.map(negative, function(x) {
-                    return [x, valFormula];
-                });
+                const negativeFormula = _.map(negative, (x) => [x, valFormula]);
                 negativeFormula.unshift("or");
                 return ["not", negativeFormula];
             } else {
@@ -410,7 +408,7 @@
 
     function collectVariables(expr) {
         const variables = {};
-        expr.visit(function(expr) {
+        expr.visit((expr) => {
             if (expr instanceof Variable) {
                 variables[expr.name] = expr;
             }
@@ -426,7 +424,7 @@
             Object.assign(variables, collectVariables(constraints[i]));
         }
 
-        _.forEach(variables, function(v) {
+        _.forEach(variables, (v) => {
             commands.push(v.declarationFormula());
             if (!v.type.trivial()) {
                 commands.push(["assert", v.type.constraintFor(v)]);
@@ -438,9 +436,7 @@
         }
 
         commands.push(["check-sat"]);
-        commands.push(["get-value", _.map(variables, function(v) {
-            return v.toFormula();
-        })]);
+        commands.push(["get-value", _.map(variables, (v) => v.toFormula())]);
         return commands;
     }
 
@@ -541,7 +537,7 @@
             const process = require("process");
 
             const solver = new Z3Solver();
-            solver.on("output", function(expr) {
+            solver.on("output", (expr) => {
                 console.log(expr);
             });
 
@@ -616,4 +612,4 @@
         throw new Error("invalid call of readInput");
     };
 
-}(J$));
+})(J$);
