@@ -8,8 +8,6 @@
     const EventEmitter = require("events");
     const fs = require("fs");
 
-    const inputs = {};
-
     class ExecutionPath {
         constructor() {
             this.constraints = [];
@@ -451,7 +449,7 @@
             if (f === sandbox.readInput) {
                 //var giid = J$.sid + "_" + iid;
                 const giid = iid;
-                return { result: new Variable("var" + giid, inputs[giid]) };
+                return { result: new Variable("var" + giid, this.inputs[giid]) };
             }
         },
 
@@ -464,6 +462,7 @@
             });
 
             this.path = new ExecutionPath();
+            this.inputs = {};
 
             function parseVarName(varName) {
                 // Slice off the 'var' prefix.
@@ -521,7 +520,7 @@
                             for (let j = 0; j < expr.length; j++) {
                                 const name = expr[j][0],
                                     value = expr[j][1];
-                                inputs[parseVarName(name)] = parseVal(value);
+                                this.inputs[parseVarName(name)] = parseVal(value);
                             }
 
                             runAnalysis(n - 1);
