@@ -17,14 +17,6 @@
         }
     }
 
-    function stringifySExpression(expr) {
-        if (typeof expr === "string") {
-            return expr;
-        }
-
-        return "(" + _.join(_.map(expr, stringifySExpression), " ") + ")";
-    }
-
     class SymbolicValue {
         constructor() {}
 
@@ -312,99 +304,54 @@
         return new Unary(iid, "!", expr);
     }
 
-    class SExprParser {
+    const MAX_INPUTS = 10;
+    const SOLVER_PATH = "../../z3/z3-4.5.0-x64-win/bin/z3";
+    const ES_THEORY_PATH = "ecmascript.smt2";
+
+    const sexpr = require("./sexpr");
+
+    class Z3Solver extends EventEmitter {
         constructor() {
-            this._levels = [];
-            this._curtok = null;
-            this._parsingString = false;
-            this._numQuotes = 0;
+            super();
+
+            const z3 = child_process.spawn(SOLVER_PATH, ["-smt2", "-in"]);
+            z3.stdin.write(fs.readFileSync(ES_THEORY_PATH));
+
+            z3.stdout.setEncoding("utf8");
+
+            const parser = new sexpr.Parser();
+            z3.stdout.on("data", (data) => {
+                parser.parse(data, (expr) => {
+                    this.emit("output", expr);
+                });
+            });
+
+            this.process = z3;
         }
 
-        parse(str, cb) {
-            for (let i = 0; i < str.length; ++i) {
-                const expr = this._feedChar(str[i]);
-                if (expr !== null && this._levels.length === 0) {
-                    cb(expr);
-                }
-            }
+        push(n) {
+            this.submitCommands([
+                ["push", n.toString()]
+            ]);
         }
 
-        _feedChar(char) {
-            if (this._parsingString) {
-                if (char === "\"") {
-                    this._numQuotes++;
-
-                    if (this._numQuotes >= 2) {
-                        this._numQuotes -= 2;
-                        this._curtok += "\"";
-                    }
-
-                    return null;
-                } else {
-                    if (this._numQuotes === 0) {
-                        this._curtok += char;
-                        return null;
-                    } else if (this._numQuotes === 1) {
-                        this._parsingString = false;
-                        this._numQuotes = 0;
-                        this._finishToken();
-                    } else {
-                        throw new Error("impossible");
-                    }
-                }
-            }
-
-            switch (char) {
-                case "\r":
-                case "\n":
-                case "\t":
-                case " ":
-                    return this._finishToken();
-                case "(":
-                    this._levels.push([]);
-                    break;
-                case ")":
-                    if (this._levels.length >= 1) {
-                        this._finishToken();
-                        const expr = this._levels.pop();
-                        if (this._levels.length > 0) {
-                            _.last(this._levels).push(expr);
-                        } else {
-                            return expr;
-                        }
-                    } else {
-                        throw new Error("parse error: too many close-parens");
-                    }
-                    break;
-                case "\"":
-                    this._parsingString = true;
-                    this._curtok = "";
-                    break;
-                default:
-                    if (this._curtok === null) {
-                        this._curtok = "";
-                    }
-                    this._curtok += char;
-                    break;
-            }
-
-            return null;
+        pop(n) {
+            this.submitCommands([
+                ["pop", n.toString()]
+            ]);
         }
 
-        _finishToken() {
-            const token = this._curtok;
-            if (token === null)
-                return null;
-            this._curtok = null;
+        submitCommands(commands) {
+            const commandString = _.map(commands, sexpr.stringify).join("\n");
+            console.log(commandString);
+            this.process.stdin.write(commandString);
+        }
 
-            if (this._levels.length > 0) {
-                _.last(this._levels).push(token);
-                return null;
-            } else {
-                return token;
-            }
+        close() {
+            this.process.stdin.end("(exit)");
         }
     }
+
 
     function collectVariables(expr) {
         const variables = {};
@@ -440,51 +387,6 @@
         return commands;
     }
 
-    const MAX_INPUTS = 10;
-    const SOLVER_PATH = "../../z3/z3-4.5.0-x64-win/bin/z3";
-    const ES_THEORY_PATH = "ecmascript.smt2";
-
-    class Z3Solver extends EventEmitter {
-        constructor() {
-            super();
-
-            const z3 = child_process.spawn(SOLVER_PATH, ["-smt2", "-in"]);
-            z3.stdin.write(fs.readFileSync(ES_THEORY_PATH));
-
-            z3.stdout.setEncoding("utf8");
-
-            const parser = new SExprParser();
-            z3.stdout.on("data", (data) => {
-                parser.parse(data, (expr) => {
-                    this.emit("output", expr);
-                });
-            });
-
-            this.process = z3;
-        }
-
-        push(n) {
-            this.submitCommands([
-                ["push", n.toString()]
-            ]);
-        }
-
-        pop(n) {
-            this.submitCommands([
-                ["pop", n.toString()]
-            ]);
-        }
-
-        submitCommands(commands) {
-            const commandString = _.map(commands, stringifySExpression).join("\n");
-            console.log(commandString);
-            this.process.stdin.write(commandString);
-        }
-
-        close() {
-            this.process.stdin.end("(exit)");
-        }
-    }
 
     J$.analysis = {
 
