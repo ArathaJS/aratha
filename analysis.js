@@ -426,7 +426,11 @@
             case "Boolean":
                 return contents === "true";
             case "Num":
-                return parseFloat(contents, 10);
+                if (typeof contents === "string") {
+                    return parseFloat(contents, 10);
+                } else {
+                    return -parseFloat(contents[1], 10);
+                }
             case "Str":
                 return contents;
             default:
