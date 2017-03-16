@@ -5,8 +5,23 @@
 
     const child_process = require("child_process");
     const _ = require("lodash");
-    const EventEmitter = require("events");
     const fs = require("fs");
+
+    class Constraint {
+        constructor(expr, value) {
+            this.expr = expr;
+            this.value = value;
+        }
+
+        negate() {
+            this.value = !this.value;
+        }
+
+        toFormula() {
+            const formula = this.expr.toFormula();
+            return this.value ? formula : ["not", formula];
+        }
+    }
 
     class ExecutionPath {
         constructor(constraints) {
@@ -16,30 +31,58 @@
         isEmpty() { return this.constraints.length === 0; }
 
         addConstraint(expr, concreteValue) {
-            if (!_.some(this.constraints,
-                    (other) => _.isEqual(expr, other.expr))) {
-                this.constraints.push({
-                    expr: expr,
-                    value: concreteValue
-                });
+            const constraint = new Constraint(expr, concreteValue);
+            if (!_.some(this.constraints, constraint)) {
+                this.constraints.push(constraint);
             }
         }
 
         clear() { this.constraints.length = 0; }
+
+        getPrefix(length) {
+            return new ExecutionPath(this.constraints.slice(0, length));
+        }
+    }
+
+    class Trie {
+        constructor() {
+            this._root = {};
+        }
+
+        add(s) {
+            let node = this._root;
+            for (let i = 0; i < s.length; i++) {
+                const w = s[i];
+                if (!node.hasOwnProperty(w))
+                    node[w] = {};
+                node = node[w];
+            }
+        }
+
+        hasPrefix(s) {
+            let node = this._root;
+            for (let i = 0; i < s.length; i++) {
+                const w = s[i];
+                if (!node.hasOwnProperty(w))
+                    return false;
+                node = node[w];
+            }
+            return true;
+        }
     }
 
     class ExecutionPathSet {
         constructor() {
-            this._paths = new Set();
+            this._paths = new Trie();
         }
 
         add(path) { this._paths.add(this._encode(path)); return this; }
 
-        has(path) { return this._paths.has(this._encode(path)); }
+        hasPrefix(path) { return this._paths.hasPrefix(this._encode(path)); }
 
         _encode(path) {
             return _.map(path.constraints,
-                (c) => (c.value ? "" : "!") + c.expr.iid).join("$");
+                (c) => (c.value ? "" : "!") + c.expr.iid);
         }
     }
 
@@ -160,7 +203,6 @@
 
         eval() { return this.concreteValue; }
         toFormula() { return this.name; }
-        declarationFormula() { return ["declare-const", this.name, "Val"]; }
     }
 
     class Binary extends SymbolicValue {
@@ -322,25 +364,25 @@
         toFormula() { return ["js." + this.op, valueToFormula(this.expr)]; }
     }
 
-    const MAX_INPUTS = 2;
+    const MAX_INPUTS = 10;
     const SOLVER_PATH = "../../z3/z3-4.5.0-x64-win/bin/z3";
     const ES_THEORY_PATH = "ecmascript.smt2";
 
     const sexpr = require("./sexpr");
 
-    class Z3Solver extends EventEmitter {
+    class Z3Solver {
         constructor() {
-            super();
-
             const z3 = child_process.spawn(SOLVER_PATH, ["-smt2", "-in"]);
             z3.stdin.write(fs.readFileSync(ES_THEORY_PATH));
+
+            this._callbackQueue = [];
 
             z3.stdout.setEncoding("utf8");
 
             const parser = new sexpr.Parser();
             z3.stdout.on("data", (data) => {
-                parser.parse(data, (expr) => {
-                    this.emit("output", expr);
+                parser.parse(data, (stmt) => {
+                    this._consume(stmt);
                 });
             });
 
@@ -348,21 +390,55 @@
         }
 
         push(n) {
-            this.submitCommands([
-                ["push", n.toString()]
-            ]);
+            this._send(["push", n.toString()]);
         }
 
         pop(n) {
-            this.submitCommands([
-                ["pop", n.toString()]
-            ]);
+            this._send(["pop", n.toString()]);
         }
 
-        submitCommands(commands) {
-            const commandString = _.map(commands, sexpr.stringify).join("\n") + "\n";
-            console.log(commandString.trim());
-            this.process.stdin.write(commandString);
+        checkSat() {
+            this._send(["check-sat"]);
+            return this._getResponse();
+        }
+
+        declareConst(name, sort) {
+            this._send(["declare-const", name, sort]);
+        }
+
+        assert(formula) {
+            this._send(["assert", formula]);
+        }
+
+        getValue(vars) {
+            this._send(["get-value", vars]);
+            return this._getResponse();
+        }
+
+        _send(command) {
+            const cmdString = sexpr.stringify(command);
+            console.log(cmdString);
+            this.process.stdin.write(cmdString + "\n");
+        }
+
+        _enqueueCallback(callback) {
+            this._callbackQueue.push(callback);
+        }
+
+        _consume(stmt) {
+            (this._callbackQueue.shift())(stmt);
+        }
+
+        _getResponse() {
+            return new Promise((resolve, reject) => {
+                this._enqueueCallback((stmt) => {
+                    if (stmt[0] !== "error") {
+                        resolve(stmt);
+                    } else {
+                        reject(stmt[1]);
+                    }
+                });
+            });
         }
 
         close() {
@@ -385,30 +461,6 @@
         }
 
         return variables;
-    }
-
-
-    function generateSolverCommands(path, variables) {
-        const commands = [];
-
-        _.forEach(variables, (v) => {
-            commands.push(v.declarationFormula());
-            if (!v.type.trivial()) {
-                commands.push(["assert", v.type.constraintFor(v)]);
-            }
-        });
-
-        _.forEach(path.constraints, (c) => {
-            const formula = c.expr.toFormula();
-            if (c.value) {
-                commands.push(["assert", formula]);
-            } else {
-                commands.push(["assert", ["not", formula]]);
-            }
-        });
-
-        commands.push(["check-sat"]);
-        return commands;
     }
 
     function parseVarName(varName) {
@@ -436,6 +488,16 @@
             default:
                 throw new Error("invalid value type " + value.toString());
         }
+    }
+
+    function parseAssignment(assignment) {
+        const solution = {};
+        for (let j = 0; j < assignment.length; j++) {
+            const name = assignment[j][0],
+                value = assignment[j][1];
+            solution[parseVarName(name)] = parseVal(value);
+        }
+        return solution;
     }
 
     J$.analysis = {
@@ -498,71 +560,96 @@
 
         onReady: function(cb) {
             const solver = new Z3Solver();
-            solver.on("output", (expr) => {
-                console.log(expr);
-            });
 
             this.path = new ExecutionPath();
 
-            function solvePath(path, callback) {
-                const variables = collectVariables(_.map(path.constraints, "expr"));
+            const inputQueue = [{}];
+            const visitedPaths = new ExecutionPathSet();
 
-                solver.once("output", (status) => {
-                    if (status === "sat") {
-                        solver.submitCommands([
-                            ["get-value", _.map(variables, (v) => v.toFormula())]
-                        ]);
-                        solver.pop(1);
-
-                        solver.once("output", (assignment) => {
-                            const solution = {};
-                            for (let j = 0; j < assignment.length; j++) {
-                                const name = assignment[j][0],
-                                    value = assignment[j][1];
-                                solution[parseVarName(name)] = parseVal(value);
-                            }
-                            callback(status, solution);
-                        });
-                    } else {
-                        callback(status);
-                        solver.pop(1);
-                    }
-                });
-
-                solver.push(1);
-                solver.submitCommands(generateSolverCommands(path, variables));
+            function enqueueInput(input) {
+                inputQueue.push(input);
             }
 
-            const inputQueue = [{}];
-            const pathSet = new ExecutionPathSet();
+            function declareVar(v) {
+                solver.declareConst(v.name, "Val");
+                if (!v.type.trivial()) {
+                    solver.assert(v.type.constraintFor(v));
+                }
+            }
 
-            function generateInputs(oldPath, callback, i) {
-                if (i >= oldPath.constraints.length) {
-                    callback();
-                    return;
+            function generateInputs(path) {
+                const promises = [];
+
+                for (let i = 0; i < path.constraints.length; i++) {
+                    path.constraints[i].negate();
+                    const prefix = path.getPrefix(i + 1);
+                    if (!visitedPaths.hasPrefix(prefix)) {
+                        solver.push(1);
+
+                        const variables = collectVariables(prefix.constraints);
+                        _.forEach(variables, (v) => declareVar(v));
+                        _.forEach(prefix.constraints, (c) => solver.assert(c.toFormula()));
+                        solver.checkSat();
+                        const p = solver.getValue(Object.keys(variables)).then((assignment) => {
+                            enqueueInput(parseAssignment(assignment));
+                        }).catch(() => Promise.resolve());
+                        promises.push(p);
+
+                        solver.pop(1);
+                    }
+                    path.constraints[i].negate();
                 }
 
-                const newPath = new ExecutionPath(oldPath.constraints.slice(0, i + 1));
-                newPath.constraints[i].value = !newPath.constraints[i].value;
+                return Promise.all(promises);
+            }
 
-                if (!pathSet.has(newPath)) {
-                    pathSet.add(newPath);
-                    solvePath(newPath, (status, solution) => {
-                        if (solution !== undefined) {
-                            inputQueue.push(solution);
+            function generateInputsIncremental(path) {
+                const promises = [];
+                const variables = {};
+
+                function declareNewVars(constraint) {
+                    const freeVars = collectVariables(constraint);
+                    _.forEach(freeVars, (v, k) => {
+                        if (!variables.hasOwnProperty(k)) {
+                            variables[k] = v;
+                            declareVar(v);
                         }
-                        // Reset the value since it's the same object as in
-                        // oldPath.
-                        newPath.constraints[i].value = !newPath.constraints[i].value;
-
-                        generateInputs(oldPath, callback, i + 1);
                     });
-                } else {
-                    generateInputs(oldPath, callback, i + 1);
                 }
+
+                solver.push(1);
+                for (let i = 0; i < path.constraints.length; i++) {
+                    const c = path.constraints[i];
+                    declareNewVars(c);
+
+                    c.negate();
+                    if (!visitedPaths.hasPrefix(path.getPrefix(i + 1))) {
+                        solver.push(1);
+
+                        solver.assert(c.toFormula());
+                        solver.checkSat();
+                        const p = solver.getValue(Object.keys(variables)).then((assignment) => {
+                            enqueueInput(parseAssignment(assignment));
+                        }).catch(() => Promise.resolve());
+                        promises.push(p);
+
+                        solver.pop(1);
+                    }
+                    c.negate();
+
+                    if (i < path.constraints.length - 1) {
+                        solver.assert(c.toFormula());
+                    }
+                }
+                solver.pop(1);
+
+                return Promise.all(promises);
             }
 
             const process = require("process");
+
+            const inputGenerator = generateInputsIncremental;
+            // const inputGenerator = generateInputs;
 
             const runAnalysis = (n) => {
                 if (inputQueue.length === 0) {
@@ -579,14 +666,16 @@
 
                 this.path.clear();
                 this.inputs = inputQueue.shift();
+                console.log("testing input: ", this.inputs);
                 cb();
-                pathSet.add(this.path);
+                visitedPaths.add(this.path);
+                console.log("executed path: ", visitedPaths._encode(this.path));
 
                 // Delete the cached copy of the script so it can be reloaded.
                 const input_filename = process.argv[1];
                 delete require.cache[require.resolve(input_filename)];
 
-                generateInputs(this.path, () => runAnalysis(n - 1), 0);
+                inputGenerator(this.path).then(() => runAnalysis(n - 1));
             };
 
             runAnalysis(MAX_INPUTS);
