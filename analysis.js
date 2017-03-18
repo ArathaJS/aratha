@@ -468,6 +468,21 @@
         return varName.slice(3);
     }
 
+    function parseNumericExpr(expr) {
+        if (typeof expr === "string")
+            return parseFloat(expr, 10);
+
+        const args = _.map(expr.slice(1), parseNumericExpr);
+        switch(expr[0]) {
+            case "-":
+                return _.reduce(args, (total, x) => total - x, 0);
+            case "/":
+                return args[0] / args[1];
+            default:
+                throw new Error("unknown operator " + expr[0]);
+        }
+    }
+
     function parseVal(value) {
         if (value === "undefined") { return undefined; }
         if (value === "null") { return null; }
@@ -478,11 +493,7 @@
             case "Boolean":
                 return contents === "true";
             case "Num":
-                if (typeof contents === "string") {
-                    return parseFloat(contents, 10);
-                } else {
-                    return -parseFloat(contents[1], 10);
-                }
+                return parseNumericExpr(contents);
             case "Str":
                 return contents;
             default:
