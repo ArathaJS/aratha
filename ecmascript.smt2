@@ -35,6 +35,13 @@
     (ite (is-Str x) (str.to.int (str x))
     42))))))
 
+(define-fun SameType ((x Val) (y Val)) Bool (or
+    (and (is-undefined x) (is-undefined y))
+    (and (is-null x) (is-null y))
+    (and (is-Boolean x) (is-Boolean y))
+    (and (is-Str x) (is-Str y))
+    (and (is-Num x) (is-Num y))))
+
 
 ; ECMAScript expressions
 
@@ -42,6 +49,26 @@
 
 ; Relational operators
 (define-fun js.=== ((x Val) (y Val)) Bool (= x y))
+
+(define-fun js.!== ((x Val) (y Val)) Bool (not (js.=== x y)))
+
+(define-fun js.== ((x Val) (y Val)) Bool
+    (ite (SameType x y) (js.=== x y)
+    (ite (and (is-null x) (is-undefined y)) true
+    (ite (and (is-null y) (is-undefined x)) true
+    (ite (and (is-Num x) (is-Str y)) (= (num x) (js.ToNumber y))
+    (ite (and (is-Num y) (is-Str x)) (= (num y) (js.ToNumber x))
+    (ite (is-Boolean x) (let ((nx (js.ToNumber x)))
+        (ite (is-Num y) (= nx (num y))
+        (ite (is-Str y) (= nx (js.ToNumber y))
+        false)))
+    (ite (is-Boolean y) (let ((ny (js.ToNumber y)))
+        (ite (is-Num x) (= (num x) ny)
+        (ite (is-Str x) (= ny (js.ToNumber x))
+        false)))
+    false))))))))
+
+(define-fun js.!= ((x Val) (y Val)) Bool (not (js.== x y)))
 
 ; NOTE: "ab" < "ac" returns false by this definition, even though "c" < "a".
 ; This is because we can't implement the character-level < operation, since Z3
