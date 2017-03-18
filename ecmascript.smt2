@@ -40,8 +40,23 @@
 
 ; Binary operators
 
+; Relational operators
 (define-fun js.=== ((x Val) (y Val)) Bool (= x y))
 
+; NOTE: "ab" < "ac" returns false by this definition, even though "c" < "a".
+; This is because we can't implement the character-level < operation, since Z3
+; doesn't (yet) let us access individual characters within strings/sequences.
+(define-fun js.< ((x Val) (y Val)) Bool
+    (ite (and (is-Str x) (is-Str y))
+        (let ((sx (str x)) (sy (str y)))
+            (and (not (str.prefixof sy sx)) (str.prefixof sx sy)))
+        (< (js.ToNumber x) (js.ToNumber y))))
+
+(define-fun js.> ((x Val) (y Val)) Bool (js.< y x))
+(define-fun js.<= ((x Val) (y Val)) Bool (not (js.< y x)))
+(define-fun js.>= ((x Val) (y Val)) Bool (not (js.< x y)))
+
+; Arithmetic operators
 (define-fun js.+ ((x Val) (y Val)) Val
     (ite (or (is-Str x) (is-Str y))
         (Str (str.++ (js.ToString x) (js.ToString y)))
