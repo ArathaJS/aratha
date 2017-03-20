@@ -117,3 +117,20 @@
 (define-fun js.>>> ((x Val) (y Val)) Val
     (let ((bx (js.ToInt32 x)) (by (js.ToInt32 y)))
         (Num (bv2int (bvlshr bx by)))))
+
+; Bitwise operators
+
+; BUG: There seems to be an issue with Z3's bridge between integers and
+; bitvectors. Currently waiting on a fix. Until then, bit ops may be incorrect.
+; https://github.com/Z3Prover/z3/issues/948
+(define-fun js.& ((x Val) (y Val)) Val
+    (let ((bx (js.ToInt32 x)) (by (js.ToInt32 y)))
+        (Num (UInt32ToInt (bv2int (bvand bx by))))))
+
+(define-fun js.bitor ((x Val) (y Val)) Val
+    (let ((bx (js.ToInt32 x)) (by (js.ToInt32 y)))
+        (Num (UInt32ToInt (bv2int (bvand bx by))))))
+
+(define-fun js.^ ((x Val) (y Val)) Val
+    (let ((bx (js.ToInt32 x)) (by (js.ToInt32 y)))
+        (Num (UInt32ToInt (bv2int (bvand bx by))))))
