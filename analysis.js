@@ -367,17 +367,13 @@
         toFormula() { return ["js." + this.op, valueToFormula(this.expr)]; }
     }
 
-    const MAX_INPUTS = 5;
-    const SOLVER_PATH = "../../z3/z3-4.5.0-x64-win/bin/z3";
-    const ES_THEORY_PATH = "ecmascript.smt2";
-
     const smt = require("./smt");
 
     class Z3Solver extends smt.Solver {
-        constructor() {
-            const z3 = child_process.spawn(SOLVER_PATH, ["-smt2", "-in"]);
+        constructor(solver_path, theory_path) {
+            const z3 = child_process.spawn(solver_path, ["-smt2", "-in"]);
             super(z3);
-            z3.stdin.write(fs.readFileSync(ES_THEORY_PATH));
+            z3.stdin.write(fs.readFileSync(theory_path));
         }
     }
 
@@ -408,7 +404,7 @@
             return parseFloat(expr, 10);
 
         const args = _.map(expr.slice(1), parseNumericExpr);
-        switch(expr[0]) {
+        switch (expr[0]) {
             case "-":
                 return _.reduce(args, (total, x) => total - x, 0);
             case "/":
@@ -505,7 +501,11 @@
         },
 
         onReady: function(cb) {
-            const solver = new Z3Solver();
+            const MAX_INPUTS = 5;
+            const SOLVER_PATH = "../../z3/z3-4.5.0-x64-win/bin/z3";
+            const ES_THEORY_PATH = "ecmascript.smt2";
+
+            const solver = new Z3Solver(SOLVER_PATH, ES_THEORY_PATH);
 
             this.path = new ExecutionPath();
 
