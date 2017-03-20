@@ -309,7 +309,10 @@
         }
 
         toFormula() {
-            return ["js." + this.op, valueToFormula(this.left), valueToFormula(this.right)];
+            let name = this.op;
+            if (name === "|")
+                name = "bitor";
+            return ["js." + name, valueToFormula(this.left), valueToFormula(this.right)];
         }
     }
 
@@ -364,85 +367,17 @@
         toFormula() { return ["js." + this.op, valueToFormula(this.expr)]; }
     }
 
-    const MAX_INPUTS = 10;
+    const MAX_INPUTS = 5;
     const SOLVER_PATH = "../../z3/z3-4.5.0-x64-win/bin/z3";
     const ES_THEORY_PATH = "ecmascript.smt2";
 
-    const sexpr = require("./sexpr");
+    const smt = require("./smt");
 
-    class Z3Solver {
+    class Z3Solver extends smt.Solver {
         constructor() {
             const z3 = child_process.spawn(SOLVER_PATH, ["-smt2", "-in"]);
+            super(z3);
             z3.stdin.write(fs.readFileSync(ES_THEORY_PATH));
-
-            this._callbackQueue = [];
-
-            z3.stdout.setEncoding("utf8");
-
-            const parser = new sexpr.Parser();
-            z3.stdout.on("data", (data) => {
-                parser.parse(data, (stmt) => {
-                    this._consume(stmt);
-                });
-            });
-
-            this.process = z3;
-        }
-
-        push(n) {
-            this._send(["push", n.toString()]);
-        }
-
-        pop(n) {
-            this._send(["pop", n.toString()]);
-        }
-
-        checkSat() {
-            this._send(["check-sat"]);
-            return this._getResponse();
-        }
-
-        declareConst(name, sort) {
-            this._send(["declare-const", name, sort]);
-        }
-
-        assert(formula) {
-            this._send(["assert", formula]);
-        }
-
-        getValue(vars) {
-            this._send(["get-value", vars]);
-            return this._getResponse();
-        }
-
-        _send(command) {
-            const cmdString = sexpr.stringify(command);
-            console.log(cmdString);
-            this.process.stdin.write(cmdString + "\n");
-        }
-
-        _enqueueCallback(callback) {
-            this._callbackQueue.push(callback);
-        }
-
-        _consume(stmt) {
-            (this._callbackQueue.shift())(stmt);
-        }
-
-        _getResponse() {
-            return new Promise((resolve, reject) => {
-                this._enqueueCallback((stmt) => {
-                    if (stmt[0] !== "error") {
-                        resolve(stmt);
-                    } else {
-                        reject(stmt[1]);
-                    }
-                });
-            });
-        }
-
-        close() {
-            this.process.stdin.end("(exit)");
         }
     }
 
