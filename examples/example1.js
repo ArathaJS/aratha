@@ -9,7 +9,7 @@ function bar() {
 }
 
 function program(b) {
-    for (var i = 0; i < 10 && (-50 >> b) === (-50 >> 3); ++i) {
+    for (var i = 0; i < 10 && (50 & b) === (50 & 7); ++i) {
         if (i % 2 === 0) {
             foo();
         } else {
