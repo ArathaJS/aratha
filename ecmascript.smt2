@@ -9,7 +9,7 @@
         (null)
         (Boolean (bool Bool))
         (Str (str String))
-        (Num (num Real))
+        (Num (num Int))
     )
 ))
 
@@ -27,7 +27,7 @@
     (ite (is-Num x) (int.to.str (to_int (num x)))
     "FOOBARBAZ"))))))
 
-(define-fun js.ToNumber ((x Val)) Real
+(define-fun js.ToNumber ((x Val)) Int
     (ite (is-Num x) (num x)
     (ite (is-undefined x) 0
     (ite (is-null x) 0
@@ -42,6 +42,8 @@
     (and (is-Str x) (is-Str y))
     (and (is-Num x) (is-Num y))))
 
+(define-fun js.ToInt32 ((x Val)) (_ BitVec 32) ((_ int2bv 32) (js.ToNumber x)))
+(define-fun UInt32ToInt ((x Int)) Int (ite (>= x 2147483648) (- x 4294967296) x))
 
 ; ECMAScript expressions
 
@@ -102,3 +104,16 @@
     (Num (mod (js.ToNumber x) (js.ToNumber y))))
 
 (define-fun js.! ((x Bool)) Bool (not x))
+
+; Bit shift operators
+(define-fun js.<< ((x Val) (y Val)) Val
+    (let ((bx (js.ToInt32 x)) (by (js.ToInt32 y)))
+        (Num (UInt32ToInt (bv2int (bvshl bx by))))))
+
+(define-fun js.>> ((x Val) (y Val)) Val
+    (let ((bx (js.ToInt32 x)) (by (js.ToInt32 y)))
+        (Num (UInt32ToInt (bv2int (bvashr bx by))))))
+
+(define-fun js.>>> ((x Val) (y Val)) Val
+    (let ((bx (js.ToInt32 x)) (by (js.ToInt32 y)))
+        (Num (bv2int (bvlshr bx by)))))
