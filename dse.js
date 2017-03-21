@@ -197,8 +197,7 @@ class DSE {
         return Promise.all(promises);
     }
 
-    _generateInputsIncremental(path) {
-        const promises = [];
+    async _generateInputsIncremental(path) {
         const variables = {};
         const solver = this._solver;
 
@@ -219,11 +218,11 @@ class DSE {
                 solver.push(1);
 
                 solver.assert(c.toFormula());
-                solver.checkSat();
-                const p = solver.getValue(Object.keys(variables)).then((assignment) => {
+                const status = await solver.checkSat();
+                if (status === "sat") {
+                    const assignment = await solver.getValue(Object.keys(variables));
                     this._inputs.push(parseAssignment(assignment));
-                }).catch(() => Promise.resolve());
-                promises.push(p);
+                }
 
                 solver.pop(1);
             }
@@ -234,8 +233,6 @@ class DSE {
             }
         }
         solver.pop(1);
-
-        return Promise.all(promises);
     }
 }
 
