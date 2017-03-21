@@ -165,13 +165,12 @@ class DSE {
 
     _processPath(path) {
         this._visitedPaths.add(path);
-        return this._generateInputsIncremental(path);
+        return this._generateInputs(path);
     }
 
     _nextInput() { return this._inputs.shift(); }
 
-    _generateInputs(path) {
-        const promises = [];
+    async _generateInputs(path) {
         const solver = this._solver;
 
         for (let i = 0; i < path.constraints.length; i++) {
@@ -183,18 +182,17 @@ class DSE {
                 const variables = collectVariables(prefix.constraints);
                 _.forEach(variables, (v) => declareVar(solver, v));
                 _.forEach(prefix.constraints, (c) => solver.assert(c.toFormula()));
-                solver.checkSat();
-                const p = solver.getValue(Object.keys(variables)).then((assignment) => {
+
+                const status = await solver.checkSat();
+                if (status === "sat") {
+                    const assignment = await solver.getValue(Object.keys(variables));
                     this._inputs.push(parseAssignment(assignment));
-                }).catch(() => Promise.resolve());
-                promises.push(p);
+                }
 
                 solver.pop(1);
             }
             path.constraints[i].negate();
         }
-
-        return Promise.all(promises);
     }
 
     async _generateInputsIncremental(path) {
