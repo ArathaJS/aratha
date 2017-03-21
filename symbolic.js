@@ -3,8 +3,6 @@
 const Type = require("./type");
 
 class SymbolicValue {
-    constructor() {}
-
     eval() { return undefined; }
     visit(visitor) { visitor(this); }
 
