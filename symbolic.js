@@ -1,5 +1,7 @@
 "use strict";
 
+const Type = require("./type");
+
 class SymbolicValue {
     constructor() {}
 
@@ -41,8 +43,6 @@ function valueToFormula(value) {
 }
 
 exports.SymbolicValue = SymbolicValue;
-
-const Type = require("./type");
 
 class Variable extends SymbolicValue {
     constructor(name, concreteValue, type) {
