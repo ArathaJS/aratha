@@ -45,6 +45,14 @@
 (define-fun js.ToInt32 ((x Val)) (_ BitVec 32) ((_ int2bv 32) (js.ToNumber x)))
 (define-fun UInt32ToInt ((x Int)) Int (ite (>= x 2147483648) (- x 4294967296) x))
 
+(define-fun typeof ((x Val)) String
+    (ite (is-Num x) "number"
+    (ite (is-undefined x) "undefined"
+    (ite (is-null x) "null"
+    (ite (is-Boolean x) "boolean"
+    (ite (is-Str x) "string"
+    "object"))))))
+
 ; ECMAScript expressions
 
 ; Binary operators
@@ -103,8 +111,6 @@
 (define-fun js.% ((x Val) (y Val)) Val
     (Num (mod (js.ToNumber x) (js.ToNumber y))))
 
-(define-fun js.! ((x Bool)) Bool (not x))
-
 ; Bit shift operators
 (define-fun js.<< ((x Val) (y Val)) Val
     (let ((bx (js.ToInt32 x)) (by (js.ToInt32 y)))
@@ -134,3 +140,13 @@
 (define-fun js.^ ((x Val) (y Val)) Val
     (let ((bx (js.ToInt32 x)) (by (js.ToInt32 y)))
         (Num (UInt32ToInt (bv2int (bvand bx by))))))
+
+; Unary operators
+
+(define-fun js.! ((x Bool)) Bool (not x))
+(define-fun js.void ((x Val)) Val undefined)
+(define-fun js.typeof ((x Val)) Val (Str (typeof x)))
+(define-fun js.u+ ((x Val)) Val (Num (js.ToNumber x)))
+(define-fun js.u- ((x Val)) Val (Num (- (js.ToNumber x))))
+
+(define-fun js.~ ((x Val)) Val (Num (UInt32ToInt (bv2int (bvnot (js.ToInt32 x))))))

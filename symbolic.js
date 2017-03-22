@@ -218,7 +218,12 @@ class Unary extends SymbolicValue {
         this._visitChild(this.expr, visitor);
     }
 
-    toFormula() { return ["js." + this.op, valueToFormula(this.expr)]; }
+    toFormula() {
+        let name = this.op;
+        if (name === "+" || name === "-")
+            name = "u" + name;
+        return ["js." + name, valueToFormula(this.expr)];
+    }
 }
 
 exports.Unary = Unary;
