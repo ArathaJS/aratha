@@ -227,3 +227,29 @@ class Unary extends SymbolicValue {
 }
 
 exports.Unary = Unary;
+
+class GetField extends SymbolicValue {
+    constructor(iid, base, offset, concreteValue) {
+        super();
+        this.iid = iid;
+        this.base = base;
+        this.offset = offset;
+        this.concreteValue = concreteValue;
+    }
+
+    eval() {
+        return this.concreteValue;
+    }
+
+    visit(visitor) {
+        visitor(this);
+        this._visitChild(this.base, visitor);
+        this._visitChild(this.offset, visitor);
+    }
+
+    toFormula() {
+        return ["js.GetField", valueToFormula(this.base), valueToFormula(this.offset)];
+    }
+}
+
+exports.GetField = GetField;

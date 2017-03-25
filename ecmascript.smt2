@@ -10,6 +10,7 @@
         (Boolean (bool Bool))
         (Str (str String))
         (Num (num Int))
+        (Obj (id Int))
     )
 ))
 
@@ -18,6 +19,9 @@
 ; These will have the same name as the functions in the specification with
 ; "js." prepended. The generally return values of an SMT-LIB sort, and may
 ; need to be wrapped with Val.
+
+(define-sort Properties () (Array String Val))
+(declare-fun GetProperties (Int) Properties)
 
 (define-fun js.ToString ((x Val)) String
     (ite (is-Str x) (str x)
@@ -52,6 +56,16 @@
     (ite (is-Boolean x) "boolean"
     (ite (is-Str x) "string"
     "object"))))))
+
+(define-fun EmptyObject () Properties ((as const Properties) undefined))
+
+(define-fun js.ToObject ((o Val)) Properties
+    (ite (is-Obj o) (GetProperties (id o))
+    (ite (is-Str o) (store EmptyObject "length" (Num (str.len (str o))))
+    EmptyObject)))
+
+(define-fun js.GetField ((o Val) (k Val)) Val
+    (select (js.ToObject o) (js.ToString k)))
 
 ; ECMAScript expressions
 

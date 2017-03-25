@@ -10,7 +10,9 @@
     const SymbolicValue = symbolic.SymbolicValue,
         Variable = symbolic.Variable,
         Binary = symbolic.Binary,
-        Unary = symbolic.Unary;
+        Unary = symbolic.Unary,
+        GetField = symbolic.GetField;
+    const Type = require("./type");
     const Z3 = require("./z3");
 
     class Jalangi2DSEAnalysis {
@@ -100,8 +102,30 @@
             }
         }
 
+        getFieldPre(iid, base, offset) {
+            if (base instanceof SymbolicValue || offset instanceof SymbolicValue) {
+                return { base: base, offset: offset, skip: true };
+            }
+        }
+
+        getField(iid, base, offset) {
+            if (base instanceof SymbolicValue || offset instanceof SymbolicValue) {
+                const cbase = base instanceof SymbolicValue ? base.eval() : base;
+                const coffset = offset instanceof SymbolicValue ? offset.eval() : offset;
+
+                if (base instanceof SymbolicValue) {
+                    const baseType = typeof cbase;
+                    const isValid = baseType !== "undefined" && baseType !== "null";
+                    this.path.addTypeConstraint(
+                        new Type(~(Type.UNDEFINED | Type.NULL)), base, isValid);
+                }
+
+                return { result: new GetField(iid, base, offset, cbase[coffset]) };
+            }
+        }
+
         onReady(cb) {
-            const MAX_ITERATIONS = 5;
+            const MAX_ITERATIONS = 9;
             this.runAnalysis(MAX_ITERATIONS, cb).catch((e) => console.error(e));
         }
     }
