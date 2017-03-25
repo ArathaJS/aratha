@@ -120,7 +120,9 @@ function parseVal(value) {
         case "Num":
             return parseNumericExpr(contents);
         case "Str":
-            return contents;
+            return contents.replace(/\\x([a-fA-F0-9]{2})/g, (a, b) => {
+                return String.fromCharCode(parseInt(b, 16));
+            });
         default:
             throw new Error("invalid value type " + value.toString());
     }
