@@ -41,8 +41,8 @@ class ExecutionPath {
         }
     }
 
-    addTypeConstraint(type, subject) {
-        const constraint = new TypeConstraint(type, subject);
+    addTypeConstraint(type, subject, value) {
+        const constraint = new TypeConstraint(type, subject, value);
         if (!_.some(this.constraints, constraint)) {
             this.constraints.push(constraint);
         }
