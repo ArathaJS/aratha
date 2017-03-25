@@ -44,6 +44,11 @@ exports.Solver = class Solver {
         return this._getResponse();
     }
 
+    getModel() {
+        this._send(["get-model"]);
+        return this._getResponse();
+    }
+
     close() {
         this.process.stdin.end("(exit)");
     }

@@ -7,6 +7,56 @@ const symbolic = require("./symbolic");
 const SymbolicValue = symbolic.SymbolicValue,
     Variable = symbolic.Variable;
 
+class TypeConstraint {
+    constructor(type, subject, value) {
+        this.type = type;
+        this.subject = subject;
+        this.value = value === undefined ? true : value;
+    }
+
+    negate() {
+        this.value = !this.value;
+    }
+
+    toFormula() {
+        const formula = this.type.constraintFor(this.subject.toFormula());
+        return this.value ? formula : ["not", formula];
+    }
+
+    getId() { return this.type.types.toString() + (this.subject.name || this.subject.iid); }
+}
+
+
+class ExecutionPath {
+    constructor(constraints) {
+        this.constraints = constraints || [];
+    }
+
+    isEmpty() { return this.constraints.length === 0; }
+
+    addConstraint(expr, concreteValue) {
+        const constraint = new Constraint(expr, concreteValue);
+        if (!_.some(this.constraints, constraint)) {
+            this.constraints.push(constraint);
+        }
+    }
+
+    addTypeConstraint(type, subject) {
+        const constraint = new TypeConstraint(type, subject);
+        if (!_.some(this.constraints, constraint)) {
+            this.constraints.push(constraint);
+        }
+    }
+
+    clear() { this.constraints.length = 0; }
+
+    getPrefix(length) {
+        return new ExecutionPath(this.constraints.slice(0, length));
+    }
+}
+
+exports.ExecutionPath = ExecutionPath;
+
 class Trie {
     constructor() {
         this._root = {};
@@ -34,29 +84,6 @@ class Trie {
     }
 }
 
-class ExecutionPath {
-    constructor(constraints) {
-        this.constraints = constraints || [];
-    }
-
-    isEmpty() { return this.constraints.length === 0; }
-
-    addConstraint(expr, concreteValue) {
-        const constraint = new Constraint(expr, concreteValue);
-        if (!_.some(this.constraints, constraint)) {
-            this.constraints.push(constraint);
-        }
-    }
-
-    clear() { this.constraints.length = 0; }
-
-    getPrefix(length) {
-        return new ExecutionPath(this.constraints.slice(0, length));
-    }
-}
-
-exports.ExecutionPath = ExecutionPath;
-
 class ExecutionPathSet {
     constructor() {
         this._paths = new Trie();
@@ -68,7 +95,7 @@ class ExecutionPathSet {
 
     _encode(path) {
         return _.map(path.constraints,
-            (c) => (c.value ? "" : "!") + c.expr.iid);
+            (c) => (c.value ? "" : "!") + c.getId());
     }
 }
 
@@ -108,7 +135,7 @@ function parseNumericExpr(expr) {
     }
 }
 
-function parseVal(value) {
+function parsePrimitive(value) {
     if (value === "undefined") { return undefined; }
     if (value === "null") { return null; }
 
@@ -124,17 +151,108 @@ function parseVal(value) {
                 return String.fromCharCode(parseInt(b, 16));
             });
         default:
-            throw new Error("invalid value type " + value.toString());
+            throw new Error("invalid primitive " + value.toString());
     }
 }
 
-function parseAssignment(assignment) {
-    const solution = {};
-    for (let j = 0; j < assignment.length; j++) {
-        const name = assignment[j][0],
-            value = assignment[j][1];
-        solution[parseVarName(name)] = parseVal(value);
+function isVarName(name) {
+    return name.startsWith("var");
+}
+
+function parseITEEqualsChain(chain, varName, output) {
+    while (chain[0] === "ite") {
+        const if_ = chain[1];
+        const op = if_[0],
+            lhs = if_[1],
+            rhs = if_[2];
+
+        if (op !== "=")
+            throw new Error(`expected =, got ${op}`);
+
+        let key;
+        if (lhs === varName) {
+            key = rhs;
+        } else if (rhs === varName) {
+            key = lhs;
+        } else {
+            throw new Error(`missing variable name ${varName} in ${if_}`);
+        }
+        // Output the then clause.
+        output[key] = chain[2];
+
+        // Continue down the else clause.
+        chain = chain[3];
     }
+
+    // Return the last else clause.
+    return chain;
+}
+
+function parseMapFunction(fun, output) {
+    return parseITEEqualsChain(fun.expr, fun.args[0][0], output);
+}
+
+function parseModel(model) {
+    const objects = {};
+
+    function parseModelValue(value) {
+        if (value[0] === "Obj") {
+            const objId = value[1];
+            if (!objects.hasOwnProperty(objId)) {
+                objects[objId] = {};
+            }
+            return objects[objId];
+        } else {
+            return parsePrimitive(value);
+        }
+    }
+
+    const solution = {};
+    const funs = {};
+    for (let i = 1; i < model.length; i++) {
+        const sentence = model[i];
+        if (sentence[0] === "define-fun") {
+            const name = sentence[1];
+            const value = sentence[4];
+            funs[name] = { args: sentence[2], expr: value };
+            if (!isVarName(name))
+                continue;
+            solution[parseVarName(name)] = parseModelValue(value);
+        } else {
+            throw new Error("unknown model sentence" + sentence.toString());
+        }
+    }
+
+    function parseObjectModel(expr) {
+        if (expr[0] === "_" && expr[1] === "as-array") {
+            const model = {};
+            const modelName = expr[2];
+            parseMapFunction(funs[modelName], model);
+            return model;
+        } else {
+            throw new Error("invalid object expression " + expr);
+        }
+    }
+
+    const getProperties = funs.GetProperties;
+    if (getProperties) {
+        const objModelExprs = {};
+        const fallbackExpr = parseMapFunction(getProperties, objModelExprs);
+
+        _.forEach(objModelExprs, (expr, id) => {
+            const objModel = parseObjectModel(expr);
+            if (!objects.hasOwnProperty(id))
+                objects[id] = {};
+            Object.assign(objects[id], _.mapValues(objModel, parseModelValue));
+            delete objects[id];
+        });
+
+        const fallbackModel = parseObjectModel(fallbackExpr);
+        _.forEach(objects, (obj) => {
+            Object.assign(obj, _.mapValues(fallbackModel, parseModelValue));
+        });
+    }
+
     return solution;
 }
 
@@ -167,6 +285,7 @@ class DSE {
 
     _processPath(path) {
         this._visitedPaths.add(path);
+        console.log("generating solutions from", this._visitedPaths._encode(path));
         return this._generateInputs(path);
     }
 
@@ -179,6 +298,8 @@ class DSE {
             path.constraints[i].negate();
             const prefix = path.getPrefix(i + 1);
             if (!this._visitedPaths.hasPrefix(prefix)) {
+                this._visitedPaths.add(prefix);
+                console.log("solving prefix", this._visitedPaths._encode(prefix));
                 solver.push(1);
 
                 const variables = collectVariables(prefix.constraints);
@@ -187,8 +308,8 @@ class DSE {
 
                 const status = await solver.checkSat();
                 if (status === "sat") {
-                    const assignment = await solver.getValue(Object.keys(variables));
-                    this._inputs.push(parseAssignment(assignment));
+                    const model = await solver.getModel();
+                    this._inputs.push(parseModel(model));
                 }
 
                 solver.pop(1);
@@ -220,8 +341,8 @@ class DSE {
                 solver.assert(c.toFormula());
                 const status = await solver.checkSat();
                 if (status === "sat") {
-                    const assignment = await solver.getValue(Object.keys(variables));
-                    this._inputs.push(parseAssignment(assignment));
+                    const model = await solver.getModel();
+                    this._inputs.push(parseModel(model));
                 }
 
                 solver.pop(1);
