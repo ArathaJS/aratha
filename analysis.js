@@ -26,7 +26,11 @@
                     this.inputs = newInput;
                     this.path.clear();
 
-                    cb();
+                    try {
+                        cb();
+                    } catch (e) {
+                        console.log("run terminated with exception:", e);
+                    }
 
                     // Delete the cached copy of the script so it can be reloaded.
                     const inputFilename = process.argv[1];
