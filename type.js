@@ -17,7 +17,7 @@ class Type {
             types = Type.TOP;
         }
 
-        this.types = types;
+        this.types = types & Type.TOP;
     }
 
     requireTypes(types) { this.types &= types; }
