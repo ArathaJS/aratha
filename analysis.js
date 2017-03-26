@@ -103,8 +103,16 @@
         }
 
         getFieldPre(iid, base, offset) {
-            if (base instanceof SymbolicValue || offset instanceof SymbolicValue) {
+            // If the offset is symbolic or we're accessing an unassigned input,
+            // skip the operation and use our special getField handling.
+            if (offset instanceof SymbolicValue || (base instanceof SymbolicValue && !base.isStored(offset))) {
                 return { base: base, offset: offset, skip: true };
+            }
+
+            // Otherwise we have a concrete offset which has been stored to the
+            // base successfully.
+            if (base instanceof SymbolicValue) {
+                return { base: base.eval(), offset: offset };
             }
         }
 
@@ -121,6 +129,17 @@
                 }
 
                 return { result: new GetField(iid, base, offset, cbase[coffset]) };
+            }
+        }
+
+        putFieldPre(iid, base, offset, val) {
+            if (base instanceof SymbolicValue || offset instanceof SymbolicValue) {
+                const cbase = base instanceof SymbolicValue ? base.eval() : base;
+                const coffset = offset instanceof SymbolicValue ? offset.eval() : offset;
+                const baseType = typeof cbase;
+                if (baseType === "object" || baseType === "function")
+                    base.markStored(coffset);
+                return { base: cbase, offset: coffset, val: val };
             }
         }
 

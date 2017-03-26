@@ -3,8 +3,15 @@
 const Type = require("./type");
 
 class SymbolicValue {
+    constructor() {
+        this._storedNames = new Set();
+    }
+
     eval() { return undefined; }
     visit(visitor) { visitor(this); }
+
+    markStored(name) { this._storedNames.add(String(name)); }
+    isStored(name) { return this._storedNames.has(String(name)); }
 
     _visitChild(child, visitor) {
         if (child instanceof SymbolicValue) {
