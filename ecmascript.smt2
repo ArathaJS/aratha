@@ -68,6 +68,9 @@
 (define-fun GetFieldVal ((o Val) (k Val)) Val (GetFieldProps (js.ToObject o) k))
 (define-fun PutField ((o Properties) (k Val) (v Val)) Properties (store o (js.ToString k) v))
 
+(define-fun MutableToProps ((base Val) (modified Properties)) Properties
+    (ite (is-Obj base) modified (js.ToObject base)))
+
 ; ECMAScript expressions
 
 ; Binary operators
