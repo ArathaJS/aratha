@@ -5,13 +5,15 @@
 
     const process = require("process");
 
+    const {Concolic, getConcrete, getSymbolic} = require("./concolic");
     const dse = require("./dse");
+    const {doBinaryOp, doUnaryOp} = require("./ops");
     const symbolic = require("./symbolic");
-    const SymbolicValue = symbolic.SymbolicValue,
-        Variable = symbolic.Variable,
+    const Variable = symbolic.Variable,
         Binary = symbolic.Binary,
         Unary = symbolic.Unary,
-        GetField = symbolic.GetField;
+        GetField = symbolic.GetField,
+        PutField = symbolic.PutField;
     const Type = require("./type");
     const Z3 = require("./z3");
 
@@ -57,34 +59,35 @@
         }
 
         conditional(iid, result) {
-            if (result instanceof SymbolicValue) {
-                const value = result.eval();
-                this.path.addConstraint(result, value);
-                return { result: value };
+            if (result instanceof Concolic) {
+                this.path.addConstraint(result.symVal, result.concVal);
+                return { result: result.concVal };
             }
         }
 
         binaryPre(iid, op, left, right) {
-            if ((left instanceof SymbolicValue) || (right instanceof SymbolicValue)) {
+            if (left instanceof Concolic || right instanceof Concolic) {
                 return { op: op, left: left, right: right, skip: true };
             }
         }
 
         binary(iid, op, left, right) {
-            if ((left instanceof SymbolicValue) || (right instanceof SymbolicValue)) {
-                return { result: new Binary(iid, op, left, right) };
+            if (left instanceof Concolic || right instanceof Concolic) {
+                const concResult = doBinaryOp(op, getConcrete(left), getConcrete(right));
+                return { result: new Concolic(concResult, new Binary(op, getSymbolic(left), getSymbolic(right))) };
             }
         }
 
         unaryPre(iid, op, left) {
-            if ((left instanceof SymbolicValue)) {
+            if (left instanceof Concolic) {
                 return { op: op, left: left, skip: true };
             }
         }
 
         unary(iid, op, left) {
-            if ((left instanceof SymbolicValue)) {
-                return { result: new Unary(iid, op, left) };
+            if (left instanceof Concolic) {
+                const concResult = doUnaryOp(op, left.concVal);
+                return { result: new Concolic(concResult, new Unary(op, left.symVal)) };
             }
         }
 
@@ -104,44 +107,43 @@
         }
 
         getFieldPre(iid, base, offset) {
-            // If the offset is symbolic or we're accessing an unassigned input,
-            // skip the operation and use our special getField handling.
-            if (offset instanceof SymbolicValue || (base instanceof SymbolicValue && !base.isStored(offset))) {
-                return { base: base, offset: offset, skip: true };
+            if (base instanceof Concolic) {
+                const baseType = typeof base.concVal;
+                const isValid = baseType !== "undefined" && baseType !== "null";
+                this.path.addTypeConstraint(
+                    new Type(~(Type.UNDEFINED | Type.NULL)), base.symVal, isValid);
             }
 
-            // Otherwise we have a concrete offset which has been stored to the
-            // base successfully.
-            if (base instanceof SymbolicValue) {
-                return { base: base.eval(), offset: offset };
+            if (offset instanceof Concolic || base instanceof Concolic) {
+                return { base: base, offset: offset, skip: true };
             }
         }
 
         getField(iid, base, offset) {
-            if (base instanceof SymbolicValue || offset instanceof SymbolicValue) {
-                const cbase = base instanceof SymbolicValue ? base.eval() : base;
-                const coffset = offset instanceof SymbolicValue ? offset.eval() : offset;
+            if (offset instanceof Concolic || base instanceof Concolic) {
+                const cbase = getConcrete(base);
+                const coffset = getConcrete(offset);
+                const sbase = getSymbolic(base);
+                const soffset = getSymbolic(offset);
 
-                if (base instanceof SymbolicValue) {
-                    const baseType = typeof cbase;
-                    const isValid = baseType !== "undefined" && baseType !== "null";
-                    this.path.addTypeConstraint(
-                        new Type(~(Type.UNDEFINED | Type.NULL)), base, isValid);
-                }
-
-                return { result: new GetField(iid, base, offset, cbase[coffset]) };
+                return { result: new Concolic(cbase[coffset], new GetField(sbase, soffset)) };
             }
         }
 
         putFieldPre(iid, base, offset, val) {
-            if (base instanceof SymbolicValue || offset instanceof SymbolicValue) {
-                const cbase = base instanceof SymbolicValue ? base.eval() : base;
-                const coffset = offset instanceof SymbolicValue ? offset.eval() : offset;
-                const baseType = typeof cbase;
-                if (baseType === "object" || baseType === "function")
-                    base.markStored(coffset);
-                return { base: cbase, offset: coffset, val: val };
+            if (base instanceof Concolic) {
+                const baseType = typeof base.concVal;
+                const isValid = baseType !== "undefined" && baseType !== "null";
+                this.path.addTypeConstraint(
+                    new Type(~(Type.UNDEFINED | Type.NULL)), base.symVal, isValid);
+
+                // Attach a PutField to our object value chain, and set the base
+                // to the concrete object for the assignment.
+                base.symVal = new PutField(base.symVal, offset, val);
+                base = base.concVal;
             }
+
+            return { base: base, offset: getConcrete(offset), val: val };
         }
 
         onReady(cb) {
