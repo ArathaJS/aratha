@@ -98,7 +98,8 @@
             if (f === sandbox.readInput) {
                 //var giid = J$.sid + "_" + iid;
                 const giid = iid;
-                return { result: new Variable("var" + giid, this.inputs[giid]) };
+                const name = "var" + giid;
+                return { result: new Concolic(this.inputs[name], new Variable(name)) };
             }
         }
 

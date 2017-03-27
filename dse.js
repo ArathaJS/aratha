@@ -115,11 +115,6 @@ function collectVariables(expr) {
     return variables;
 }
 
-function parseVarName(varName) {
-    // Slice off the 'var' prefix.
-    return varName.slice(3);
-}
-
 function parseNumericExpr(expr) {
     if (typeof expr === "string")
         return parseFloat(expr, 10);
@@ -217,7 +212,7 @@ function parseModel(model) {
             funs[name] = { args: sentence[2], expr: value };
             if (!isVarName(name))
                 continue;
-            solution[parseVarName(name)] = parseModelValue(value);
+            solution[name] = parseModelValue(value);
         } else {
             throw new Error("unknown model sentence" + sentence.toString());
         }
