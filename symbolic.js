@@ -128,8 +128,12 @@ class GetField extends SymbolicValue {
             switch (this.base.exprType()) {
                 case "Val":
                     return ["GetFieldVal", this.base.toFormula(), valueToFormula(this.offset)];
-                case "Properties":
-                    return ["GetFieldProps", this.base.toObjectFormula(), valueToFormula(this.offset)];
+                case "Properties": {
+                    const baseFormula = this.base.toFormula();
+                    const ite = ["MutableToProps", baseFormula, this.base.toObjectFormula()];
+                    return ["GetFieldProps", ite, valueToFormula(this.offset)];
+                }
+
                 default:
                     throw new Error("unknown expression type " + this.base.exprType());
             }
