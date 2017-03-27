@@ -1,17 +1,11 @@
 "use strict";
 
-const Type = require("./type");
-
 class SymbolicValue {
-    constructor() {
-        this._storedNames = new Set();
-    }
-
-    eval() { return undefined; }
     visit(visitor) { visitor(this); }
 
-    markStored(name) { this._storedNames.add(String(name)); }
-    isStored(name) { return this._storedNames.has(String(name)); }
+    exprType() {
+        return "Val";
+    }
 
     _visitChild(child, visitor) {
         if (child instanceof SymbolicValue) {
@@ -50,115 +44,24 @@ function valueToFormula(value) {
 exports.SymbolicValue = SymbolicValue;
 
 class Variable extends SymbolicValue {
-    constructor(name, concreteValue, type) {
+    constructor(name) {
         super();
-
         this.name = name;
-        this.concreteValue = concreteValue;
-        this.type = type || new Type();
     }
 
-    eval() { return this.concreteValue; }
     toFormula() { return this.name; }
+
+    toString() { return this.name; }
 }
 
 exports.Variable = Variable;
 
 class Binary extends SymbolicValue {
-    constructor(iid, op, left, right) {
+    constructor(op, left, right) {
         super();
-        this.iid = iid; //J$.getGlobalIID(iid);
         this.op = op;
         this.left = left;
         this.right = right;
-    }
-
-    eval() {
-        const op = this.op;
-        let left = this.left,
-            right = this.right,
-            result;
-
-        if (left instanceof SymbolicValue) {
-            left = left.eval();
-        }
-
-        if (right instanceof SymbolicValue) {
-            right = right.eval();
-        }
-
-        switch (op) {
-            case "+":
-                result = left + right;
-                break;
-            case "-":
-                result = left - right;
-                break;
-            case "*":
-                result = left * right;
-                break;
-            case "/":
-                result = left / right;
-                break;
-            case "%":
-                result = left % right;
-                break;
-            case "<<":
-                result = left << right;
-                break;
-            case ">>":
-                result = left >> right;
-                break;
-            case ">>>":
-                result = left >>> right;
-                break;
-            case "<":
-                result = left < right;
-                break;
-            case ">":
-                result = left > right;
-                break;
-            case "<=":
-                result = left <= right;
-                break;
-            case ">=":
-                result = left >= right;
-                break;
-            case "==":
-                result = left == right;
-                break;
-            case "!=":
-                result = left != right;
-                break;
-            case "===":
-                result = left === right;
-                break;
-            case "!==":
-                result = left !== right;
-                break;
-            case "&":
-                result = left & right;
-                break;
-            case "|":
-                result = left | right;
-                break;
-            case "^":
-                result = left ^ right;
-                break;
-            case "delete":
-                result = delete left[right];
-                break;
-            case "instanceof":
-                result = left instanceof right;
-                break;
-            case "in":
-                result = left in right;
-                break;
-            default:
-                throw new Error(op + " at " + this.iid + " not found");
-        }
-
-        return result;
     }
 
     visit(visitor) {
@@ -173,51 +76,17 @@ class Binary extends SymbolicValue {
             name = "bitor";
         return ["js." + name, valueToFormula(this.left), valueToFormula(this.right)];
     }
+
+    toString() { return `(${this.left} ${this.op} ${this.right})`; }
 }
 
 exports.Binary = Binary;
 
 class Unary extends SymbolicValue {
-    constructor(iid, op, expr) {
+    constructor(op, expr) {
         super();
-        this.iid = iid; //J$.getGlobalIID(iid);
         this.op = op;
         this.expr = expr;
-    }
-
-    eval() {
-        const op = this.op;
-        let expr = this.expr,
-            result;
-
-        if (expr instanceof SymbolicValue) {
-            expr = expr.eval();
-        }
-
-        switch (op) {
-            case "+":
-                result = +expr;
-                break;
-            case "-":
-                result = -expr;
-                break;
-            case "~":
-                result = ~expr;
-                break;
-            case "!":
-                result = !expr;
-                break;
-            case "typeof":
-                result = typeof expr;
-                break;
-            case "void":
-                result = void(expr);
-                break;
-            default:
-                throw new Error(op + " at " + this.iid + " not found");
-        }
-
-        return result;
     }
 
     visit(visitor) {
@@ -229,23 +98,23 @@ class Unary extends SymbolicValue {
         let name = this.op;
         if (name === "+" || name === "-")
             name = "u" + name;
-        return ["js." + name, valueToFormula(this.expr)];
+        let expr = this.expr;
+        if (expr.exprType() === "Properties") {
+            expr = expr.getTopBase();
+        }
+        return ["js." + name, valueToFormula(expr)];
     }
+
+    toString() { return `(${this.op} ${this.expr})`; }
 }
 
 exports.Unary = Unary;
 
 class GetField extends SymbolicValue {
-    constructor(iid, base, offset, concreteValue) {
+    constructor(base, offset) {
         super();
-        this.iid = iid;
         this.base = base;
         this.offset = offset;
-        this.concreteValue = concreteValue;
-    }
-
-    eval() {
-        return this.concreteValue;
     }
 
     visit(visitor) {
@@ -255,8 +124,75 @@ class GetField extends SymbolicValue {
     }
 
     toFormula() {
-        return ["js.GetField", valueToFormula(this.base), valueToFormula(this.offset)];
+        if (this.base instanceof SymbolicValue) {
+            switch (this.base.exprType()) {
+                case "Val":
+                    return ["GetFieldVal", this.base.toFormula(), valueToFormula(this.offset)];
+                case "Properties":
+                    return ["GetFieldProps", this.base.toObjectFormula(), valueToFormula(this.offset)];
+                default:
+                    throw new Error("unknown expression type " + this.base.exprType());
+            }
+        } else {
+            throw new Error("not implemented: GetField with concrete base");
+        }
     }
+
+    toString() { return `${this.base}[${this.offset}]`; }
 }
 
 exports.GetField = GetField;
+
+class PutField extends SymbolicValue {
+    constructor(base, offset, val) {
+        super();
+        this.base = base;
+        this.offset = offset;
+        this.val = val;
+    }
+
+    visit(visitor) {
+        visitor(this);
+        this._visitChild(this.base, visitor);
+        this._visitChild(this.offset, visitor);
+        this._visitChild(this.val, visitor);
+    }
+
+    exprType() {
+        return "Properties";
+    }
+
+    getTopBase() {
+        let node = this.base;
+        while (node.base instanceof SymbolicValue) {
+            node = node.base;
+        }
+        return node;
+    }
+
+    toObjectFormula() {
+        if (this.base instanceof SymbolicValue) {
+            const baseFormula = this.base.toFormula();
+            const offsetFormula = valueToFormula(this.offset);
+            const valFormula = valueToFormula(this.val);
+            switch (this.base.exprType()) {
+                case "Val":
+                    return ["PutField", ["GetProperties", ["id", baseFormula]], offsetFormula, valFormula];
+                case "Properties":
+                    return ["PutField", baseFormula, offsetFormula, valFormula];
+                default:
+                    throw new Error("unknown expression type " + this.base.exprType());
+            }
+        } else {
+            throw new Error("not implemented: PutField with concrete base");
+        }
+    }
+
+    toFormula() {
+        return valueToFormula(this.getTopBase());
+    }
+
+    toString() { return this.getTopBase().toString(); }
+}
+
+exports.PutField = PutField;

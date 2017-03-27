@@ -64,8 +64,9 @@
     (ite (is-Str o) (store EmptyObject "length" (Num (str.len (str o))))
     EmptyObject)))
 
-(define-fun js.GetField ((o Val) (k Val)) Val
-    (select (js.ToObject o) (js.ToString k)))
+(define-fun GetFieldProps ((o Properties) (k Val)) Val (select o (js.ToString k)))
+(define-fun GetFieldVal ((o Val) (k Val)) Val (GetFieldProps (js.ToObject o) k))
+(define-fun PutField ((o Properties) (k Val) (v Val)) Properties (store o (js.ToString k) v))
 
 ; ECMAScript expressions
 

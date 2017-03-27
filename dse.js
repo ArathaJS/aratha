@@ -10,6 +10,11 @@ const SymbolicValue = symbolic.SymbolicValue,
 class TypeConstraint {
     constructor(type, subject, value) {
         this.type = type;
+        if (subject instanceof SymbolicValue) {
+            if (subject.exprType() === "Properties") {
+                subject = subject.getTopBase();
+            }
+        }
         this.subject = subject;
         this.value = value === undefined ? true : value;
     }
@@ -23,7 +28,7 @@ class TypeConstraint {
         return this.value ? formula : ["not", formula];
     }
 
-    getId() { return this.type.types.toString() + (this.subject.name || this.subject.iid); }
+    getId() { return this.type.types.toString() + (this.subject.name || String(this.subject)); }
 }
 
 
@@ -253,9 +258,6 @@ function parseModel(model) {
 
 function declareVar(solver, v) {
     solver.declareConst(v.name, "Val");
-    if (!v.type.trivial()) {
-        solver.assert(v.type.constraintFor(v.toFormula()));
-    }
 }
 
 class DSE {
@@ -302,9 +304,12 @@ class DSE {
                 _.forEach(prefix.constraints, (c) => solver.assert(c.toFormula()));
 
                 const status = await solver.checkSat();
+                console.log(status);
                 if (status === "sat") {
                     const model = await solver.getModel();
-                    this._inputs.push(parseModel(model));
+                    const parsed = parseModel(model);
+                    console.log(parsed);
+                    this._inputs.push(parsed);
                 }
 
                 solver.pop(1);

@@ -15,7 +15,7 @@ class Constraint {
         return this.value ? formula : ["not", formula];
     }
 
-    getId() { return this.expr.iid; }
+    getId() { return String(this.expr); }
 }
 
 module.exports = Constraint;
