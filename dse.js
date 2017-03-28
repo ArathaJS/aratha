@@ -3,9 +3,7 @@
 const _ = require("lodash");
 
 const Constraint = require("./constraint");
-const symbolic = require("./symbolic");
-const SymbolicValue = symbolic.SymbolicValue,
-    Variable = symbolic.Variable;
+const {SymbolicValue, Variable} = require("./symbolic");
 
 class TypeConstraint {
     constructor(type, subject, value) {
