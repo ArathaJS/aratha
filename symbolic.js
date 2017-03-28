@@ -41,6 +41,20 @@ function valueToFormula(value) {
     }
 }
 
+function valueToPropsFormula(value) {
+    if (typeof value === "object") {
+        let result = "EmptyObject";
+        for (const k in value) {
+            if (value.hasOwnProperty(k)) {
+                result = ["PutField", result, valueToFormula(k), valueToFormula(value[k])];
+            }
+        }
+        return result;
+    } else {
+        return ["js.ToObject", valueToFormula(value)];
+    }
+}
+
 exports.SymbolicValue = SymbolicValue;
 
 class Variable extends SymbolicValue {
@@ -138,7 +152,7 @@ class GetField extends SymbolicValue {
                     throw new Error("unknown expression type " + this.base.exprType());
             }
         } else {
-            throw new Error("not implemented: GetField with concrete base");
+            return ["GetFieldProps", valueToPropsFormula(this.base), valueToFormula(this.offset)];
         }
     }
 
