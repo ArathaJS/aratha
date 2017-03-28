@@ -6,14 +6,9 @@
     const process = require("process");
 
     const {Concolic, getConcrete, getSymbolic} = require("./concolic");
-    const dse = require("./dse");
+    const {ExecutionPath, DSE} = require("./dse");
     const {doBinaryOp, doUnaryOp} = require("./ops");
-    const symbolic = require("./symbolic");
-    const Variable = symbolic.Variable,
-        Binary = symbolic.Binary,
-        Unary = symbolic.Unary,
-        GetField = symbolic.GetField,
-        PutField = symbolic.PutField;
+    const {Variable, Binary, Unary, GetField, PutField} = require("./symbolic");
     const Type = require("./type");
     const Z3 = require("./z3");
 
@@ -22,11 +17,11 @@
             const SOLVER_PATH = "../../z3/z3-4.5.0-x64-win/bin/z3";
             const ES_THEORY_PATH = "ecmascript.smt2";
 
-            this.path = new dse.ExecutionPath();
+            this.path = new ExecutionPath();
 
             const solver = new Z3(SOLVER_PATH, ES_THEORY_PATH);
             try {
-                const searcher = new dse.DSE(solver, (newInput) => {
+                const searcher = new DSE(solver, (newInput) => {
                     this.inputs = newInput;
                     this.path.clear();
 
