@@ -1,3 +1,5 @@
+(set-option :produce-models true)
+
 ; Datatypes
 
 ; Val is the datatype for an ECMAScript value. We do not currently have
@@ -28,7 +30,7 @@
     (ite (is-undefined x) "undefined"
     (ite (is-null x) "null"
     (ite (is-Boolean x) (ite (bool x) "true" "false")
-    (ite (is-Num x) (int.to.str (to_int (num x)))
+    (ite (is-Num x) (int.to.str (num x))
     "FOOBARBAZ"))))))
 
 (define-fun js.ToNumber ((x Val)) Int
@@ -45,9 +47,6 @@
     (and (is-Boolean x) (is-Boolean y))
     (and (is-Str x) (is-Str y))
     (and (is-Num x) (is-Num y))))
-
-(define-fun js.ToInt32 ((x Val)) (_ BitVec 32) ((_ int2bv 32) (js.ToNumber x)))
-(define-fun UInt32ToInt ((x Int)) Int (ite (>= x 2147483648) (- x 4294967296) x))
 
 (define-fun typeof ((x Val)) String
     (ite (is-Num x) "number"
@@ -129,36 +128,6 @@
 (define-fun js.% ((x Val) (y Val)) Val
     (Num (mod (js.ToNumber x) (js.ToNumber y))))
 
-; Bit shift operators
-(define-fun js.<< ((x Val) (y Val)) Val
-    (let ((bx (js.ToInt32 x)) (by (js.ToInt32 y)))
-        (Num (UInt32ToInt (bv2int (bvshl bx by))))))
-
-(define-fun js.>> ((x Val) (y Val)) Val
-    (let ((bx (js.ToInt32 x)) (by (js.ToInt32 y)))
-        (Num (UInt32ToInt (bv2int (bvashr bx by))))))
-
-(define-fun js.>>> ((x Val) (y Val)) Val
-    (let ((bx (js.ToInt32 x)) (by (js.ToInt32 y)))
-        (Num (bv2int (bvlshr bx by)))))
-
-; Bitwise operators
-
-; BUG: There seems to be an issue with Z3's bridge between integers and
-; bitvectors. Currently waiting on a fix. Until then, bit ops may be incorrect.
-; https://github.com/Z3Prover/z3/issues/948
-(define-fun js.& ((x Val) (y Val)) Val
-    (let ((bx (js.ToInt32 x)) (by (js.ToInt32 y)))
-        (Num (UInt32ToInt (bv2int (bvand bx by))))))
-
-(define-fun js.bitor ((x Val) (y Val)) Val
-    (let ((bx (js.ToInt32 x)) (by (js.ToInt32 y)))
-        (Num (UInt32ToInt (bv2int (bvand bx by))))))
-
-(define-fun js.^ ((x Val) (y Val)) Val
-    (let ((bx (js.ToInt32 x)) (by (js.ToInt32 y)))
-        (Num (UInt32ToInt (bv2int (bvand bx by))))))
-
 ; Unary operators
 
 (define-fun js.! ((x Bool)) Bool (not x))
@@ -166,5 +135,3 @@
 (define-fun js.typeof ((x Val)) Val (Str (typeof x)))
 (define-fun js.u+ ((x Val)) Val (Num (js.ToNumber x)))
 (define-fun js.u- ((x Val)) Val (Num (- (js.ToNumber x))))
-
-(define-fun js.~ ((x Val)) Val (Num (UInt32ToInt (bv2int (bvnot (js.ToInt32 x))))))
