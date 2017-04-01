@@ -20,3 +20,9 @@ node ../src/js/commands/jalangi.js --analysis ./ <path to script>
 ```
 
 from this directory.
+
+## Running tests
+
+The tests are written with [Mocha](https://mochajs.org/). To run them, run
+`mocha` from this directory, or `../node_modules/.bin/mocha` if you've installed
+Jalangi 2's dependencies.
