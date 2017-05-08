@@ -72,6 +72,7 @@
     (let ((v (select o (js.ToString k))))
         (ite (is-Just v) (just v) undefined)))
 (define-fun PutField ((o Properties) (k Val) (v Val)) Properties (store o (js.ToString k) (Just v)))
+(define-fun DeleteField ((o Properties) (k Val)) Properties (store o (js.ToString k) Nothing))
 
 (define-fun MutableToProps ((base Val) (modified Properties)) Properties
     (ite (is-Obj base) modified (js.ToObject base)))
