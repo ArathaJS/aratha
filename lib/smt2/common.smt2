@@ -16,13 +16,18 @@
     )
 ))
 
+(declare-datatypes () (
+    (MaybeVal
+        (Nothing)
+        (Just (just Val)))))
+
 ; ECMAScript internal functions
 ;
 ; These will have the same name as the functions in the specification with
 ; "js." prepended. The generally return values of an SMT-LIB sort, and may
 ; need to be wrapped with Val.
 
-(define-sort Properties () (Array String Val))
+(define-sort Properties () (Array String MaybeVal))
 (declare-fun GetProperties (Int) Properties)
 
 (define-fun js.ToString ((x Val)) String
@@ -56,15 +61,17 @@
     (ite (is-Str x) "string"
     "object"))))))
 
-(define-fun EmptyObject () Properties ((as const Properties) undefined))
+(define-fun EmptyObject () Properties ((as const Properties) Nothing))
 
 (define-fun js.ToObject ((o Val)) Properties
     (ite (is-Obj o) (GetProperties (id o))
-    (ite (is-Str o) (store EmptyObject "length" (Num (str.len (str o))))
+    (ite (is-Str o) (store EmptyObject "length" (Just (Num (str.len (str o)))))
     EmptyObject)))
 
-(define-fun GetField ((o Properties) (k Val)) Val (select o (js.ToString k)))
-(define-fun PutField ((o Properties) (k Val) (v Val)) Properties (store o (js.ToString k) v))
+(define-fun GetField ((o Properties) (k Val)) Val
+    (let ((v (select o (js.ToString k))))
+        (ite (is-Just v) (just v) undefined)))
+(define-fun PutField ((o Properties) (k Val) (v Val)) Properties (store o (js.ToString k) (Just v)))
 
 (define-fun MutableToProps ((base Val) (modified Properties)) Properties
     (ite (is-Obj base) modified (js.ToObject base)))
@@ -72,6 +79,8 @@
 ; ECMAScript expressions
 
 ; Binary operators
+
+(define-fun js.in ((x Val) (y Properties)) Bool (is-Just (select y (js.ToString x))))
 
 ; Relational operators
 (define-fun js.=== ((x Val) (y Val)) Bool (= x y))
