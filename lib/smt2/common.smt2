@@ -46,6 +46,8 @@
     (ite (is-Str x) (str.to.int (str x))
     42))))))
 
+(define-fun js.ToInteger ((x Val)) Int (js.ToNumber x))
+
 (define-fun SameType ((x Val) (y Val)) Bool (or
     (and (is-undefined x) (is-undefined y))
     (and (is-null x) (is-null y))
