@@ -16,7 +16,8 @@ describe("the analysis", function() {
     const analysisDir = path.resolve(__dirname, "../");
 
     const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
-    const files = glob.sync("example+([0-9]).js", { nosort: true, cwd: examplesDir, absolute: true });
+    let files = glob.sync("example+([0-9]).js", { nosort: true, cwd: examplesDir, absolute: true });
+    files = files.concat(glob.sync("string/*.js", { nosort: true, cwd: examplesDir, absolute: true, ignore: "string/*_jalangi_*" }));
     files.sort(collator.compare);
 
     context("with CVC4", function() {
