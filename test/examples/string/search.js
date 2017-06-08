@@ -2,6 +2,6 @@
 
 var x = J$.readInput();
 
-if (x.search("bleep") === 5) {
+if (x.search(/bleep\w+/) === 5) {
     console.log("success");
 }
