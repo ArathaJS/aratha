@@ -11,7 +11,8 @@ const regexps = [
     /(?=abcdef).*/,
     /abc\0/,
     /(abc)\0\1/,
-    /[a-zA-Z0-9]*/
+    /[a-zA-Z0-9]*/,
+    /\w+/
 ];
 
 describe("the regex parser", function() {
