@@ -21,6 +21,7 @@
         "comma_first": false,
         "operator_position": "before-newline",
         "eval_code": false,
-        "space_before_conditional": true
+        "space_before_conditional": true,
+        "preserve_ternary_lines": true
     }
 }
