@@ -51,6 +51,14 @@
 
 (define-fun js.ToInteger ((x Val)) Int (js.ToNumber x))
 
+(define-fun js.ToBoolean ((x Val)) Bool
+    (ite (is-Num x) (distinct (num x) 0)
+    (ite (is-undefined x) false
+    (ite (is-null x) false
+    (ite (is-Boolean x) (bool x)
+    (ite (is-Str x) (distinct (str x) "")
+    true))))))
+
 (define-fun SameType ((x Val) (y Val)) Bool (or
     (and (is-undefined x) (is-undefined y))
     (and (is-null x) (is-null y))
