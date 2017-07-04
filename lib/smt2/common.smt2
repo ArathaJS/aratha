@@ -38,12 +38,15 @@
     (ite (is-Num x) (int.to.str (num x))
     "FOOBARBAZ"))))))
 
+; TODO: implement more of the string-to-number semantics
+(define-fun StringToNumber ((x String)) Int (ite (= x "") 0 (str.to.int x)))
+
 (define-fun js.ToNumber ((x Val)) Int
     (ite (is-Num x) (num x)
     (ite (is-undefined x) 0
     (ite (is-null x) 0
     (ite (is-Boolean x) (ite (bool x) 1 0)
-    (ite (is-Str x) (str.to.int (str x))
+    (ite (is-Str x) (StringToNumber (str x))
     42))))))
 
 (define-fun js.ToInteger ((x Val)) Int (js.ToNumber x))
