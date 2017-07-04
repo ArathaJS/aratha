@@ -94,7 +94,7 @@
 
 ; Binary operators
 
-(define-fun js.in ((x Val) (y Properties)) Bool (is-Just (select y (js.ToString x))))
+(define-fun js.in ((x String) (y Properties)) Bool (is-Just (select y x)))
 
 ; Relational operators
 (define-fun js.=== ((x Val) (y Val)) Bool (= x y))
