@@ -157,3 +157,18 @@
 (define-fun js.typeof ((x Val)) Val (Str (typeof x)))
 (define-fun js.u+ ((x Val)) Val (Num (js.ToNumber x)))
 (define-fun js.u- ((x Val)) Val (Num (- (js.ToNumber x))))
+
+; String functions
+
+(define-fun min ((x Int) (y Int)) Int (ite (< x y) x y))
+(define-fun max ((x Int) (y Int)) Int (ite (> x y) x y))
+(define-fun clamp ((x Int) (lower Int) (upper Int)) Int (min (max x lower) upper))
+
+(define-fun substring ((x String) (start Int) (end Int)) String (str.substr x start (- end start)))
+(define-fun js.substring ((x String) (start Int) (end Val)) String
+    (let (
+        (len (str.len x)))
+            (let
+                ((fs (clamp start 0 len))
+                (fe (clamp (ite (is-undefined end) len (js.ToInteger end)) 0 len)))
+                (substring x (min fs fe) (max fs fe)))))
