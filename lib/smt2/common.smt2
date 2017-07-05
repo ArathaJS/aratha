@@ -166,9 +166,16 @@
 
 (define-fun substring ((x String) (start Int) (end Int)) String (str.substr x start (- end start)))
 (define-fun js.substring ((x String) (start Int) (end Val)) String
-    (let (
-        (len (str.len x)))
-            (let
-                ((fs (clamp start 0 len))
-                (fe (clamp (ite (is-undefined end) len (js.ToInteger end)) 0 len)))
+    (let ((len (str.len x)))
+        (let (
+            (fs (clamp start 0 len))
+            (fe (clamp (ite (is-undefined end) len (js.ToInteger end)) 0 len)))
                 (substring x (min fs fe) (max fs fe)))))
+
+(define-fun js.slice ((x String) (start Int) (end Val)) String
+    (let ((len (str.len x)))
+        (let ((ie (ite (is-undefined end) len (js.ToInteger end))))
+            (let (
+                (from (ite (< start 0) (max 0 (+ len start)) (min start len)))
+                (to (ite (< ie 0) (max 0 (+ len ie)) (min ie len))))
+                    (str.substr x from (max 0 (- to from)))))))
