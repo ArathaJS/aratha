@@ -1,4 +1,5 @@
 (set-option :produce-models true)
+(set-option :produce-unsat-cores true)
 
 ; Datatypes
 
@@ -123,14 +124,14 @@
 ; This is because we can't implement the character-level < operation, since Z3
 ; doesn't (yet) let us access individual characters within strings/sequences.
 (define-fun js.< ((x Val) (y Val)) Bool
-    (ite (and (is-Str x) (is-Str y))
+    (and (not (is-Obj x)) (not (is-Obj y)) (ite (and (is-Str x) (is-Str y))
         (let ((sx (str x)) (sy (str y)))
             (and (not (str.prefixof sy sx)) (str.prefixof sx sy)))
-        (< (js.ToNumber x) (js.ToNumber y))))
+        (< (js.ToNumber x) (js.ToNumber y)))))
 
-(define-fun js.> ((x Val) (y Val)) Bool (js.< y x))
-(define-fun js.<= ((x Val) (y Val)) Bool (not (js.< y x)))
-(define-fun js.>= ((x Val) (y Val)) Bool (not (js.< x y)))
+(define-fun js.> ((x Val) (y Val)) Bool (and (not (is-Obj x)) (not (is-Obj y)) (js.< y x)))
+(define-fun js.<= ((x Val) (y Val)) Bool (and (not (is-Obj x)) (not (is-Obj y)) (not (js.< y x))))
+(define-fun js.>= ((x Val) (y Val)) Bool (and (not (is-Obj x)) (not (is-Obj y)) (not (js.< x y))))
 
 ; Arithmetic operators
 (define-fun js.+ ((x Val) (y Val)) Val
@@ -145,7 +146,7 @@
     (Num (* (js.ToNumber x) (js.ToNumber y))))
 
 (define-fun js./ ((x Val) (y Val)) Val
-    (Num (/ (js.ToNumber x) (js.ToNumber y))))
+    (Num (div (js.ToNumber x) (js.ToNumber y))))
 
 (define-fun js.% ((x Val) (y Val)) Val
     (Num (mod (js.ToNumber x) (js.ToNumber y))))
