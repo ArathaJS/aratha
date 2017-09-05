@@ -6,19 +6,21 @@
 ; Val is the datatype for an ECMAScript value. We do not currently have
 ; support for objects.
 
-(declare-datatype Val (
+(declare-datatypes () (
+    (Val
         (undefined)
         (null)
         (Boolean (bool Bool))
         (Str (str String))
         (Num (num Int))
         (Obj (id Int))
+    )
 ))
 
-(declare-datatype MaybeVal
-    (
+(declare-datatypes () (
+    (MaybeVal
         (Nothing)
-        (Just (just Val))))
+        (Just (just Val)))))
 
 ; ECMAScript internal functions
 ;
