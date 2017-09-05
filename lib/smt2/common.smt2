@@ -46,7 +46,7 @@
     (ite (is-null x) 0
     (ite (is-Boolean x) (ite (bool x) 1 0)
     (ite (is-Str x) (StringToNumber (str x))
-    42))))))
+    0)))))) ; Otherwise we're an Object, but we don't have NaNs, so we'll return zero here.
 
 (define-fun js.ToInteger ((x Val)) Int (js.ToNumber x))
 
