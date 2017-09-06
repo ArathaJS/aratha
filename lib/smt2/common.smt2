@@ -120,18 +120,37 @@
 
 (define-fun js.!= ((x Val) (y Val)) Bool (not (js.== x y)))
 
+(define-fun CharToCode ((x String)) Int
+    (ite (= x "\x00") 0
+    1))
+
 ; NOTE: "ab" < "ac" returns false by this definition, even though "c" < "a".
 ; This is because we can't implement the character-level < operation, since Z3
 ; doesn't (yet) let us access individual characters within strings/sequences.
-(define-fun js.< ((x Val) (y Val)) Bool
-    (and (not (is-Obj x)) (not (is-Obj y)) (ite (and (is-Str x) (is-Str y))
-        (let ((sx (str x)) (sy (str y)))
-            (and (not (str.prefixof sy sx)) (str.prefixof sx sy)))
-        (< (js.ToNumber x) (js.ToNumber y)))))
+(define-fun StrLessThan ((x String) (y String)) Bool
+    (and (not (str.prefixof y x)) (str.prefixof x y)))
+;(define-fun StrLessThan ((x String) (y String)) Bool
+;    (and (not (str.prefixof y x)) (or (str.prefixof x y)
+;    (exists ((i Int)) (and (<= 0 i) (< i (str.len x)) (< i (str.len y)) (= (str.substr x 0 i) (str.substr y 0 i)) (< (CharToCode (str.at x i)) (CharToCode (str.at y i))))))))
 
-(define-fun js.> ((x Val) (y Val)) Bool (and (not (is-Obj x)) (not (is-Obj y)) (js.< y x)))
-(define-fun js.<= ((x Val) (y Val)) Bool (and (not (is-Obj x)) (not (is-Obj y)) (not (js.< y x))))
-(define-fun js.>= ((x Val) (y Val)) Bool (and (not (is-Obj x)) (not (is-Obj y)) (not (js.< x y))))
+(define-fun ToPrimitive ((x Val)) Val (ite (is-Obj x) (Str "[object Object]") x))
+
+(define-fun IsNumber ((x Val)) Bool (and
+    (not (is-undefined x))
+    (not (is-Obj x))
+    (=> (is-Str x) (let ((sx (str x))) (or (distinct (str.to.int sx) (- 1)) (= sx "") (= sx "-1"))))))
+
+(define-fun AbsRelComp ((x Val) (y Val)) Bool
+    (let ((px (ToPrimitive x)) (py (ToPrimitive y)))
+    (and (=> (not (and (is-Str px) (is-Str py))) (< (js.ToNumber px) (js.ToNumber py)))
+    (=> (and (is-Str px) (is-Str py)) (StrLessThan (str px) (str py))))))
+
+(define-fun IsDefinedComp ((x Val) (y Val)) Bool (or (and (IsNumber x) (IsNumber y)) (and (or (is-Str x) (is-Obj x)) (or (is-Str y) (is-Obj y)))))
+
+(define-fun js.< ((x Val) (y Val)) Bool (and (IsDefinedComp x y) (AbsRelComp x y)))
+(define-fun js.> ((x Val) (y Val)) Bool (and (IsDefinedComp y x) (AbsRelComp y x)))
+(define-fun js.<= ((x Val) (y Val)) Bool (and (IsDefinedComp y x) (not (AbsRelComp y x))))
+(define-fun js.>= ((x Val) (y Val)) Bool (and (IsDefinedComp x y) (not (AbsRelComp x y))))
 
 ; Arithmetic operators
 (define-fun js.+ ((x Val) (y Val)) Val
