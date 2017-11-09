@@ -3,24 +3,35 @@
 
 ; Datatypes
 
-; Val is the datatype for an ECMAScript value. We do not currently have
-; support for objects.
+; Val is the datatype for an ECMAScript value.
 
-(declare-datatypes () (
-    (Val
-        (undefined)
-        (null)
-        (Boolean (bool Bool))
-        (Str (str String))
-        (Num (num Int))
-        (Obj (id Int))
-    )
-))
+;(declare-datatypes () (
+;    (Val
+;        (undefined)
+;        (null)
+;        (Boolean (bool Bool))
+;        (Str (str String))
+;        (Num (num Int))
+;        (Obj (id Int))
+;    )
+;))
+;
+;(declare-datatypes () (
+;    (MaybeVal
+;        (Nothing)
+;        (Just (just Val)))))
 
-(declare-datatypes () (
-    (MaybeVal
-        (Nothing)
-        (Just (just Val)))))
+(declare-datatype Val (
+    (undefined)
+    (null)
+    (Boolean (bool Bool))
+    (Str (str String))
+    (Num (num Int))
+    (Obj (id Int))))
+
+(declare-datatype MaybeVal (
+    (Nothing)
+    (Just (just Val))))
 
 ; ECMAScript internal functions
 ;
@@ -37,7 +48,7 @@
     (ite (is-null x) "null"
     (ite (is-Boolean x) (ite (bool x) "true" "false")
     (ite (is-Num x) (int.to.str (num x))
-    "FOOBARBAZ"))))))
+    "[object Object]"))))))
 
 ; TODO: implement more of the string-to-number semantics
 (define-fun StringToNumber ((x String)) Int (ite (= x "") 0 (str.to.int x)))
@@ -120,18 +131,18 @@
 
 (define-fun js.!= ((x Val) (y Val)) Bool (not (js.== x y)))
 
-(define-fun CharToCode ((x String)) Int
-    (ite (= x "\x00") 0
-    1))
+;(define-fun CharToCode ((x String)) Int
+;    (ite (= x "\x00") 0
+;    1))
+;(define-fun StrLessThan ((x String) (y String)) Bool
+;    (and (not (str.prefixof y x)) (or (str.prefixof x y)
+;    (exists ((i Int)) (and (<= 0 i) (< i (str.len x)) (< i (str.len y)) (= (str.substr x 0 i) (str.substr y 0 i)) (< (CharToCode (str.at x i)) (CharToCode (str.at y i))))))))
 
 ; NOTE: "ab" < "ac" returns false by this definition, even though "c" < "a".
 ; This is because we can't implement the character-level < operation, since Z3
 ; doesn't (yet) let us access individual characters within strings/sequences.
 (define-fun StrLessThan ((x String) (y String)) Bool
     (and (not (str.prefixof y x)) (str.prefixof x y)))
-;(define-fun StrLessThan ((x String) (y String)) Bool
-;    (and (not (str.prefixof y x)) (or (str.prefixof x y)
-;    (exists ((i Int)) (and (<= 0 i) (< i (str.len x)) (< i (str.len y)) (= (str.substr x 0 i) (str.substr y 0 i)) (< (CharToCode (str.at x i)) (CharToCode (str.at y i))))))))
 
 (define-fun ToPrimitive ((x Val)) Val (ite (is-Obj x) (Str "[object Object]") x))
 
@@ -151,6 +162,13 @@
 (define-fun js.> ((x Val) (y Val)) Bool (and (IsDefinedComp y x) (AbsRelComp y x)))
 (define-fun js.<= ((x Val) (y Val)) Bool (and (IsDefinedComp y x) (not (AbsRelComp y x))))
 (define-fun js.>= ((x Val) (y Val)) Bool (and (IsDefinedComp x y) (not (AbsRelComp x y))))
+
+; Object relational operators
+
+; BUG: Since there is little to no support for recursive functions, our
+; axiomatization does not support prototypes, so we can never produce a model
+; satisfying instanceof. As such, we define it to always be false.
+(define-fun js.instanceof ((obj Val) (proto Val)) Bool false)
 
 ; Arithmetic operators
 (define-fun js.+ ((x Val) (y Val)) Val
@@ -199,3 +217,8 @@
                 (from (ite (< start 0) (max 0 (+ len start)) (min start len)))
                 (to (ite (< ie 0) (max 0 (+ len ie)) (min ie len))))
                     (str.substr x from (max 0 (- to from)))))))
+
+(define-fun js.constructArray ((len Val)) Properties
+    (ite (is-Num len)
+        (store EmptyObject "length" (Just len))
+        (store (store EmptyObject "length" (Just (Num 1))) "0" (Just len))))
