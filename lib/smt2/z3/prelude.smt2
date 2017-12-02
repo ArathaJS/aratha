@@ -1,6 +1,6 @@
 (set-option :produce-models true)
 (set-option :produce-unsat-cores true)
-(set-option :timeout 10000)
+(set-option :timeout 30000)
 
 ; Datatypes
 
