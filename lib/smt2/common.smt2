@@ -7,12 +7,14 @@
 (define-sort Properties () (Array String MaybeVal))
 (declare-fun GetProperties (Int) Properties)
 
+(define-fun NumberToString ((x Int)) String (ite (>= x 0) (int.to.str x) (str.++ "-" (int.to.str (- x)))))
+
 (define-fun js.ToString ((x Val)) String
     (ite (is-Str x) (str x)
     (ite (is-undefined x) "undefined"
     (ite (is-null x) "null"
     (ite (is-Boolean x) (ite (bool x) "true" "false")
-    (ite (is-Num x) (int.to.str (num x))
+    (ite (is-Num x) (NumberToString (num x))
     "[object Object]"))))))
 
 ; TODO: implement more of the string-to-number semantics
