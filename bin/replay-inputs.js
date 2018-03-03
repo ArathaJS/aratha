@@ -10,16 +10,19 @@ const settings = process.env.SETTINGS || "";
 const logdir = process.env.LOGDIR || "./";
 
 scripts.forEach((scriptPath) => {
-	const scriptName = path.basename(scriptPath, ".js");
+    const scriptName = path.basename(scriptPath, ".js");
     const inputFilename = logdir + scriptName + (settings.length > 0 ? "." + settings : "") + ".inputlog.json";
 
-    let rawLog = fs.readFileSync(inputFilename, {encoding: "utf8"}).trim();
+    let rawLog = fs.readFileSync(inputFilename, { encoding: "utf8" }).trim();
     if (!rawLog.endsWith("]"))
         rawLog += "]";
-    const inputs = JSON.parse(rawLog).map((x, i) => ({idx: i, input: x}));
+    const inputs = JSON.parse(rawLog).map((x, i) => ({ idx: i, input: x }));
     const uniqueInputs = _.uniqWith(inputs, (a, b) => _.isEqual(a.input, b.input));
-    for (let el of uniqueInputs) {
+    for (const el of uniqueInputs) {
         console.log("replaying " + el.idx);
-        child_process.spawnSync("node", ["-r", "./lib/input-reader.js", scriptPath], {env: {INPUT_FILE: inputFilename, INPUT_IDX: el.idx.toString()}, stdio: "inherit"});
+        child_process.spawnSync("node", ["-r", "./lib/input-reader.js", scriptPath], {
+            env: { INPUT_FILE: inputFilename, INPUT_IDX: el.idx.toString() },
+            stdio: "inherit"
+        });
     }
 });

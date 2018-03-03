@@ -39,9 +39,7 @@ function runScript(scriptPath, solverName, options) {
         env.Z3_PATH = process.env.Z3_PATH;
     }
     const analysis = child_process.spawn(
-        "node",
-        ["../src/js/commands/jalangi.js", "--analysis", "./", scriptPath],
-        {
+        "node", ["../src/js/commands/jalangi.js", "--analysis", "./", scriptPath], {
             stdio: "inherit",
             env: env
         }
@@ -53,7 +51,7 @@ function runScript(scriptPath, solverName, options) {
             () => analysis.kill(),
             (analysisTimeout + 1) * 1000); // give a chance to exit gracefully
     }
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         analysis.on("exit", (exitCode, signal) => {
             activeChild = null;
             clearTimeout(analysisTimer);
@@ -64,7 +62,7 @@ function runScript(scriptPath, solverName, options) {
 
 function possibleOptions() {
     const alloptions = [];
-    for(let i = 0; i < 2; ++i) {
+    for (let i = 0; i < 2; ++i) {
         for (let j = 0; j < 2; ++j) {
             alloptions.push({
                 unsatCores: i,
@@ -76,26 +74,34 @@ function possibleOptions() {
 }
 
 function printTimings() {
-    console.log("Timings")
-    console.log("-------")
+    console.log("Timings");
+    console.log("-------");
     console.log(["Program", "Solver", "Unsat cores?", "Incremental?", "# inputs", "# unique inputs", "Time"].join("\t"));
     timings.forEach((timing) => {
-        console.log([timing.scriptName, timing.solverName, timing.options.unsatCores ? "y" : "n", timing.options.incremental ? "y" : "n", timing.numCases, timing.numUniqueCases, timing.timeElapsed].join("\t"));
+        console.log([
+            timing.scriptName,
+            timing.solverName,
+            timing.options.unsatCores ? "y" : "n",
+            timing.options.incremental ? "y" : "n",
+            timing.numCases,
+            timing.numUniqueCases,
+            timing.timeElapsed
+        ].join("\t"));
     });
 }
 
 async function main() {
     const alloptions = possibleOptions();
-    for(let scriptPath of scripts) {
-        for(let solverName of solvers) {
-            for (let options of alloptions) {
+    for (const scriptPath of scripts) {
+        for (const solverName of solvers) {
+            for (const options of alloptions) {
                 if (receivedSigint) {
                     return;
                 }
 
                 const start = process.hrtime();
                 const status = await runScript(scriptPath, solverName, options);
-                const end = process.hrtime();
+                const elapsed = process.hrtime(start);
                 if (status !== 0) {
                     if (typeof status === "number") {
                         console.log("analysis process terminated with exit code", status);
@@ -107,7 +113,7 @@ async function main() {
                 const scriptName = path.basename(scriptPath, ".js");
 
                 try {
-                    let rawLog = fs.readFileSync("inputlog.json", {encoding: "utf8"}).trim();
+                    let rawLog = fs.readFileSync("inputlog.json", { encoding: "utf8" }).trim();
                     if (!rawLog.endsWith("]"))
                         rawLog += "]";
                     const inputs = JSON.parse(rawLog);
@@ -120,13 +126,18 @@ async function main() {
                         numCases: inputs.length,
                         numUniqueCases: uniqueInputs.length,
                         options: options,
-                        timeElapsed: (end[0] - start[0]) + (end[1] - start[1]) / 1e9
+                        timeElapsed: elapsed[0] + elapsed[1] / 1e9
                     });
-                } catch(e) {
+                } catch (e) {
                     console.error("exception:", e);
                 }
 
-                const logName = [scriptName, solverName, options.unsatCores ? "uc" : "no-uc", options.incremental ? "inc" : "no-inc"].join(".");
+                const logName = [
+                    scriptName,
+                    solverName,
+                    options.unsatCores ? "uc" : "no-uc",
+                    options.incremental ? "inc" : "no-inc"
+                ].join(".");
                 fs.renameSync("inputlog.json", logName + ".inputlog.json");
                 fs.renameSync("solver_commands.smt2", logName + ".solver_commands.smt2");
 
@@ -142,4 +153,3 @@ main().then(() => {
     printTimings();
     console.error("run-inputs: uncaught error:", e);
 });
-
