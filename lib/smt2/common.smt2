@@ -48,16 +48,19 @@
 (define-fun typeof ((x Val)) String
     (ite (is-Num x) "number"
     (ite (is-undefined x) "undefined"
-    (ite (is-null x) "null"
     (ite (is-Boolean x) "boolean"
     (ite (is-Str x) "string"
-    "object"))))))
+    "object"))))) ; NOTE: typeof null === "object"
 
 (define-fun EmptyObject () Properties ((as const Properties) Nothing))
 
+(define-fun StringToObject ((s String)) Properties (store EmptyObject "length" (Just (Num (str.len s)))))
+(define-fun NumberToObject ((x Int)) Properties EmptyObject)
+(define-fun BooleanToObject ((p Bool)) Properties EmptyObject)
+
 (define-fun js.ToObject ((o Val)) Properties
     (ite (is-Obj o) (GetProperties (id o))
-    (ite (is-Str o) (store EmptyObject "length" (Just (Num (str.len (str o)))))
+    (ite (is-Str o) (StringToObject (str o))
     EmptyObject)))
 
 (define-fun GetField ((o Properties) (k Val)) Val
