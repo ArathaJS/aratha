@@ -202,3 +202,17 @@
     (ite (is-Num len)
         (store EmptyObject "length" (Just len))
         (store (store EmptyObject "length" (Just (Num 1))) "0" (Just len))))
+
+(define-fun IsWhitespaceString ((s String)) Bool (str.in.re s (re.* (re.union (str.to.re " ") (str.to.re "\xa0") (str.to.re "\t") (str.to.re "\f") (str.to.re "\v") (str.to.re "\r") (str.to.re "\n")))))
+
+; TODO: implement parseInt for radices other than 10
+(define-fun ParseIntCondition ((s String) (radix Int) (ws String) (numPart String) (rem String) (i Int)) Bool
+    (and
+        (= s (str.++ ws numPart rem))
+        (IsWhitespaceString ws)
+        (not (= "" numPart))
+        (str.in.re numPart (re.++ (re.opt (str.to.re "-")) (re.+ (re.range "0" "9"))))
+        (or (= 0 radix) (<= 2 radix 36))
+        (or (= "" rem) (distinct (str.at rem 0) "0" "1" "2" "3" "4" "5" "6" "7" "8" "9"))
+        (or (= radix 0) (= radix 10) (< i radix 10))
+        (= i (StringToNumber numPart))))
