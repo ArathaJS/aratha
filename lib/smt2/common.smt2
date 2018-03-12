@@ -180,6 +180,13 @@
             (fe (clamp (ite (is-undefined end) len (js.ToInteger end)) 0 len)))
                 (substring x (min fs fe) (max fs fe)))))
 
+(define-fun js.substr ((x String) (start Int) (len Val)) String
+    (ite (>= start (str.len x))
+        ""
+        (let ((sp (ite (>= start 0) start (max 0 (+ (str.len x) start)))))
+            (let ((remlen (- (str.len x) sp)))
+                (str.substr x sp (ite (is-undefined len) remlen (clamp (js.ToInteger len) 0 remlen)))))))
+
 (define-fun js.slice ((x String) (start Int) (end Val)) String
     (let ((len (str.len x)))
         (let ((ie (ite (is-undefined end) len (js.ToInteger end))))
