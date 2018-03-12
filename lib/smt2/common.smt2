@@ -18,7 +18,10 @@
     "[object Object]"))))))
 
 ; TODO: implement more of the string-to-number semantics
-(define-fun StringToNumber ((x String)) Int (ite (= x "") 0 (str.to.int x)))
+(define-fun StringToNumber ((x String)) Int
+    (ite (= x "") 0
+    (ite (str.prefixof "-" x) (- (str.to.int (str.substr x 1 (- (str.len x) 1))))
+    (str.to.int x))))
 
 (define-fun js.ToNumber ((x Val)) Int
     (ite (is-Num x) (num x)
