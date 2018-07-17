@@ -4,6 +4,6 @@ B["1"] = A;
 B[1]["0"] = "Hello";
 x = A[J$.readInput()];
 if (x === "Hello") 
-  y = 0;
+  console.log("PC1")
 else 
-  y = 1;
+  console.log("PC2")

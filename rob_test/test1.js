@@ -1,9 +1,9 @@
 x = J$.readInput();
 y = "length";
 if (x[y] >= 5)  
-  x = 0;  
+  console.log("PC1")
 else
   if (y[x] === "g")
-    x = 2;
+    console.log("PC2")
   else
-    x = 1;
+    console.log("PC3")
