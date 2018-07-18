@@ -1,9 +1,9 @@
-//x = J$.readInput();
-//y = J$.readInput();
-//if (x + y > 0)
-//  console.log("PC1")
-//else
-//  console.log("PC2")
+x = J$.readInput();
+y = J$.readInput();
+if (x + y > 0)
+  console.log("PC1")
+else
+  console.log("PC2")
   
 //FIXME 1: Seg. Fault.
 //x = J$.readInput();
