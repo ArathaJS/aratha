@@ -1,0 +1,22 @@
+#!/bin/sh
+
+DIR=/home/roberto/jalangi2-concolic
+
+if
+  [ -z $2 ]
+then
+  s=G-Strings
+else
+  s=$2
+fi
+
+SOLVER=$s node $DIR/src/js/commands/jalangi.js --analysis ./ $1
+
+ilog=`basename $1 | awk -F"." '{print $1}'`.inputlog.json
+mv inputlog.json $ilog
+
+nyc node $DIR/experiments/bin/replay-inputs.js $1
+
+cat $1
+
+cat $ilog
