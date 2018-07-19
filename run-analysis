@@ -17,6 +17,6 @@ mv inputlog.json $ilog
 
 nyc node $DIR/experiments/bin/replay-inputs.js $1
 
-cat $1
+#cat $1
 
-cat $ilog
+#cat $ilog
