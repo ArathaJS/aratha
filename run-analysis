@@ -17,6 +17,6 @@ mv inputlog.json $ilog
 
 nyc node $DIR/experiments/bin/replay-inputs.js $1
 
-echo "===== SOURCE ====="; cat $1 | awk '{print NR,"\t",$0}'
+#echo "===== SOURCE ====="; cat $1 | awk '{print NR,"\t",$0}'
 
 echo "===== INPUT ===== ";  cat $ilog
