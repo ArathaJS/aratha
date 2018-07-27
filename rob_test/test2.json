@@ -3,5 +3,5 @@
 {"var0":true},
 {"var0":"5","var1":0},
 {"var0":true,"var1":true},
-{"var0":0,"var1":"g"}
+{"var0":true,"var1":{"true":"g"}}
 ]
