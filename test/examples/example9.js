@@ -7,6 +7,7 @@ if (x.a === 1) {
 }
 
 x.a = 1;
+//x.b = 2;
 
 if (x.a === 1) {
     console.log("success", x);
