@@ -24,3 +24,5 @@ echo "===== INPUT ===== ";  cat $ilog
 nyc report --reporter=html
 
 xdg-open $DIR/coverage/index.html
+
+rm $ilog
