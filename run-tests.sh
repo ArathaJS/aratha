@@ -7,11 +7,14 @@ N_TESTS=26
 # TODO: Inspect 1, 3, 11, 17.
 COV=(NaN 37.5 75 75 100 100 100 88.89 83.33 100 100 80 100 100 66.67 100 100 \
      66.67 100 100 100 100 100 100 100 100 100)
+ERR=err.log
+     
 for (( i=1; i<=$N_TESTS; i++ ))
 do
   j=$TDIR/example"$i".js
   echo "Testing $j"
-  SOLVER=G-Strings node $JAL --analysis ./ $j >/dev/null 2>/dev/null
+  SOLVER=G-Strings node $JAL --analysis ./ $j >/dev/null 2>$ERR
+  cat $ERR
   ilog=`basename $j | awk -F"." '{print $1}'`.inputlog.json
   mv inputlog.json $ilog
   echo "===== INPUT ===== "
@@ -31,3 +34,4 @@ do
     echo -e "All good!\n=========\n"
   fi
 done
+rm $ERR
