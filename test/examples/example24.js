@@ -1,5 +1,5 @@
-x = J$.readInput();
-y = J$.readInput();
+x = J$.readNumber();
+y = J$.readNumber();
 if (x + y > 0)
   console.log("PC1")
 else
