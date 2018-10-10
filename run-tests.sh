@@ -4,7 +4,6 @@ DIR=`dirname $(readlink -f "$0")`
 TDIR=$DIR/test/examples
 JAL=$DIR/../src/js/commands/jalangi.js
 N_TESTS=26
-# TODO: Inspect 1, 3, 11, 17.
 COV=(NaN 37.5 75 75 100 100 100 88.89 83.33 100 100 80 100 100 66.67 100 100 \
      66.67 100 100 100 100 100 100 100 100 100)
 ERR=err.log
