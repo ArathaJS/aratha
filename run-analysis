@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DIR=$HOME/src/jalangi2-concolic
+DIR=/home/roberto/jalangi2-concolic
 
 if
   [ -z $2 ]
