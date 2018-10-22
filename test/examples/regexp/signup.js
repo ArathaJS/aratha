@@ -8,34 +8,34 @@ var PASS_RE =/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/;
 
 var userName = J$.readString();
 var firstName = J$.readString();
-//var lastName = J$.readString();
+var lastName = J$.readString();
 var password = J$.readString();
 var verify = J$.readString();
-//var email = J$.readString();
+var email = J$.readString();
 
 var all_checks = true;
 
-if (!USER_RE.test(userName)) { // FIXME: With if (userName.length === 0 || userName.length > 20) it works!
-  console.log("Invalid user name.");
-  all_checks = false;
-}
-if (!FNAME_RE.test(firstName)) { // FIXME: With if (userName.length === 0 || userName.length > 100) it works!
-  console.log("Invalid first name.");
-  all_checks = false;
-}
-// FIXME: Temporary commented out.
+//if (!USER_RE.test(userName)) { // FIXME: With if (userName.length === 0 || userName.length > 20) it works!
+//  console.log("Invalid user name.");
+//  all_checks = false;
+//}
+//if (!FNAME_RE.test(firstName)) { // FIXME: With if (userName.length === 0 || userName.length > 100) it works!
+//  console.log("Invalid first name.");
+//  all_checks = false;
+//}
+//// FIXME: Temporary commented out.
 //if (!LNAME_RE.test(lastName)) {
 //  console.log("Invalid last name.");
 //  all_checks = false;
 //}
-//if (!PASS_RE.test(password)) {
-//  console.log("Password must be 8 to 18 characters including numbers, lowercase and uppercase letters.");
-//  all_checks = false;
-//}
-if (password !== verify) {
-//  console.log(errors.verifyError = "Password must match"); // FIXME: ReferenceError: errors is not defined
+if (!PASS_RE.test(password)) {
+  console.log("Password must be 8 to 18 characters including numbers, lowercase and uppercase letters.");
   all_checks = false;
 }
+//if (password !== verify) {
+//  console.log("Password must match");
+//  all_checks = false;
+//}
 //if (!EMAIL_RE.test(email)) {
 //  console.log("Invalid email address");
 //}
