@@ -12,7 +12,7 @@ for (( i=1; i<=$N_TESTS; i++ ))
 do
   j=$TDIR/example"$i".js
   echo "Testing $j"
-  SOLVER=G-Strings node $JAL --analysis ./ $j >/dev/null 2>$ERR
+  SOLVER=G-Strings INCREMENTAL=0 node $JAL --analysis ./ $j >/dev/null 2>$ERR
   cat $ERR
   ilog=`basename $j | awk -F"." '{print $1}'`.inputlog.json
   mv inputlog.json $ilog
