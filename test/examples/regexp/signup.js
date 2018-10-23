@@ -15,31 +15,32 @@ var email = J$.readString();
 
 var all_checks = true;
 
-//if (!USER_RE.test(userName)) { // FIXME: With if (userName.length === 0 || userName.length > 20) it works!
-//  console.log("Invalid user name.");
-//  all_checks = false;
-//}
-//if (!FNAME_RE.test(firstName)) { // FIXME: With if (userName.length === 0 || userName.length > 100) it works!
-//  console.log("Invalid first name.");
-//  all_checks = false;
-//}
-//// FIXME: Temporary commented out.
-//if (!LNAME_RE.test(lastName)) {
-//  console.log("Invalid last name.");
-//  all_checks = false;
-//}
+if (!USER_RE.test(userName)) {
+  console.log("Invalid user name.");
+  all_checks = false;
+}
+if (!FNAME_RE.test(firstName)) {
+  console.log("Invalid first name.");
+  all_checks = false;
+}
+
+if (!LNAME_RE.test(lastName)) {
+  console.log("Invalid last name.");
+  all_checks = false;
+}
 if (!PASS_RE.test(password)) {
   console.log("Password must be 8 to 18 characters including numbers, lowercase and uppercase letters.");
   all_checks = false;
 }
-//if (password !== verify) {
-//  console.log("Password must match");
-//  all_checks = false;
-//}
-//if (!EMAIL_RE.test(email)) {
-//  console.log("Invalid email address");
-//}
+if (password !== verify) {
+  console.log("Password must match");
+  all_checks = false;
+}
+if (!EMAIL_RE.test(email)) {
+  console.log("Invalid email address");
+  all_checks = false; // FIXME: Added this.
+}
 
-if(all_checks) {
+if (all_checks) {
   console.log("Success!");
 }
