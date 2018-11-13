@@ -169,11 +169,11 @@
 (define-fun js.u+ ((x Val)) Val (Num (js.ToNumber x)))
 (define-fun js.u- ((x Val)) Val (Num (- (js.ToNumber x))))
 
-; String functions
-
 (define-fun min ((x Int) (y Int)) Int (ite (< x y) x y))
 (define-fun max ((x Int) (y Int)) Int (ite (> x y) x y))
 (define-fun clamp ((x Int) (lower Int) (upper Int)) Int (min (max x lower) upper))
+
+; String functions
 
 (define-fun substring ((x String) (start Int) (end Int)) String (str.substr x start (- end start)))
 (define-fun js.substring ((x String) (start Int) (end Val)) String
@@ -216,3 +216,10 @@
         (or (= "" rem) (distinct (str.at rem 0) "0" "1" "2" "3" "4" "5" "6" "7" "8" "9"))
         (or (= radix 0) (= radix 10) (< i radix 10))
         (= i (StringToNumber numPart))))
+
+(define-fun TOFIXED_ZEROS () String "00000000000000000000")
+
+(define-fun js.toFixed ((n Int) (fracDigits Int)) String
+    (ite (<= 1 fracDigits 20)
+        (str.++ (NumberToString n) "." (str.substr TOFIXED_ZEROS 0 fracDigits))
+        (NumberToString n)))
