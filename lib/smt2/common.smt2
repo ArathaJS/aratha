@@ -223,3 +223,38 @@
     (ite (<= 1 fracDigits 20)
         (str.++ (NumberToString n) "." (str.substr TOFIXED_ZEROS 0 fracDigits))
         (NumberToString n)))
+
+; The number regex for JavaScript is:
+; \s*(0(x|X)[0-9a-fA-F]+|(+|-)?[0-9]*(\.)?[0-9]+(e|E)(+|-)?[0-9]+)\s*
+; FIXME: add support for whitespace before and after
+(define-fun IsFiniteNumberString ((s String)) Bool
+    (str.in.re s (re.opt (re.union
+        (re.++
+            (str.to.re "0")
+            (re.union (str.to.re "x") (str.to.re "X"))
+            (re.+ (re.union
+                (re.range "0" "9")
+                (re.range "a" "f")
+                (re.range "A" "F"))))
+        (re.++
+            (re.opt (re.union (str.to.re "+") (str.to.re "-")))
+            (re.* (re.range "0" "9"))
+            (re.union ; Need at least one digit before or after the point.
+                (re.++ (re.range "0" "9") (re.opt (str.to.re ".")))
+                (re.++ (str.to.re ".") (re.range "0" "9")))
+            (re.* (re.range "0" "9"))
+            (re.opt (re.++
+                (re.union (str.to.re "e") (str.to.re "E"))
+                (re.opt (re.union (str.to.re "+") (str.to.re "-")))
+                (re.+ (re.range "0" "9")))))))))
+
+(define-fun js.isFinite ((v Val)) Bool
+    (and
+        (not (or (is-Obj v) (is-undefined v)))
+        (=> (is-Str v) (IsFiniteNumberString (str v)))))
+;(define-fun js.Number.isFinite ((v Val)) Bool (and (is-Num v) (js.isFinite v)))
+(define-fun js.Number.isFinite ((v Val)) Bool (is-Num v))
+
+; FIXME: this only works for ASCII.
+(define-fun js.isLowerCase ((s String)) Bool (not (str.in.re s (re.++ re.allchar (re.range "A" "Z") re.allchar))))
+(define-fun js.toLowerCase ((s String)) String s)

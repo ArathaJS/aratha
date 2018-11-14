@@ -11,7 +11,7 @@ const logdir = process.env.LOGDIR || "./";
 
 scripts.forEach((scriptPath) => {
     const scriptName = path.basename(scriptPath, ".js");
-    const inputFilename = logdir + scriptName + (settings.length > 0 ? "." + settings : "") + ".inputlog.json";
+    const inputFilename = process.env.INPUT_FILE || logdir + scriptName + (settings.length > 0 ? "." + settings : "") + ".inputlog.json";
 
     let rawLog = fs.readFileSync(inputFilename, { encoding: "utf8" }).trim();
     if (!rawLog.endsWith("]"))

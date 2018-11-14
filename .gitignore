@@ -1,2 +1,6 @@
 coverage
 results
+z3.log
+inputlog.json
+*.inputlog.json
+solver_commands.smt2
