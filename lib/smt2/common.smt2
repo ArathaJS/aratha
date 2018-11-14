@@ -223,3 +223,7 @@
     (ite (<= 1 fracDigits 20)
         (str.++ (NumberToString n) "." (str.substr TOFIXED_ZEROS 0 fracDigits))
         (NumberToString n)))
+
+; FIXME: this only works for ASCII.
+(define-fun js.isLowerCase ((s String)) Bool (not (str.in.re s (re.++ re.allchar (re.range "A" "Z") re.allchar))))
+(define-fun js.toLowerCase ((s String)) String s)
