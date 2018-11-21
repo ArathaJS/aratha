@@ -1,3 +1,3 @@
 /* global J$ */
 
-J$.assert(isFinite(J$.readNumber()));
+J$.check(isFinite(J$.readInput()));

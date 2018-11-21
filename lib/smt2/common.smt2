@@ -248,12 +248,22 @@
                 (re.opt (re.union (str.to.re "+") (str.to.re "-")))
                 (re.+ (re.range "0" "9")))))))))
 
+(define-fun IsNumberString ((s String)) Bool (or
+    (IsFiniteNumberString s)
+    (not (distinct s "Infinity" "+Infinity" "-Infinity"))))
+
 (define-fun js.isFinite ((v Val)) Bool
     (and
         (not (or (is-Obj v) (is-undefined v)))
         (=> (is-Str v) (IsFiniteNumberString (str v)))))
 ;(define-fun js.Number.isFinite ((v Val)) Bool (and (is-Num v) (js.isFinite v)))
 (define-fun js.Number.isFinite ((v Val)) Bool (is-Num v))
+
+(define-fun js.isNaN ((v Val)) Bool (or
+    (is-undefined v)
+    (is-Obj v)
+    (and (is-Str v) (not (IsNumberString (str v))))))
+(define-fun js.Number.isNaN ((v Val)) Bool false)
 
 ; FIXME: this only works for ASCII.
 (define-fun js.isLowerCase ((s String)) Bool (not (str.in.re s (re.++ re.allchar (re.range "A" "Z") re.allchar))))
