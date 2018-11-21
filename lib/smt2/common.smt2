@@ -268,3 +268,50 @@
 ; FIXME: this only works for ASCII.
 (define-fun js.isLowerCase ((s String)) Bool (not (str.in.re s (re.++ re.allchar (re.range "A" "Z") re.allchar))))
 (define-fun js.toLowerCase ((s String)) String s)
+
+
+(define-fun IntToInt32 ((x Int)) (_ BitVec 32) ((_ int2bv 32) x))
+(define-fun js.ToInt32 ((x Val)) (_ BitVec 32) (IntToInt32 (js.ToNumber x)))
+
+; Bit shift operators
+(define-fun js.<< ((x Val) (y Val)) Val
+    (let ((bx (js.ToInt32 x)) (by (js.ToInt32 y)))
+        (Num (Int32ToInt (bvshl bx by)))))
+
+(define-fun js.>> ((x Val) (y Val)) Val
+    (let ((bx (js.ToInt32 x)) (by (js.ToInt32 y)))
+        (Num (Int32ToInt (bvashr bx by)))))
+
+(define-fun js.>>> ((x Val) (y Val)) Val
+    (let ((bx (js.ToInt32 x)) (by (js.ToInt32 y)))
+        (Num (Int32ToUInt (bvlshr bx by)))))
+
+; Bitwise operators
+
+; BUG: There seems to be an issue with Z3's bridge between integers and
+; bitvectors. Currently waiting on a fix. Until then, bit ops may be incorrect.
+; https://github.com/Z3Prover/z3/issues/948
+
+(define-fun IntAnd32 ((x Int) (y Int)) Int
+    (Int32ToInt (bvand (IntToInt32 x) (IntToInt32 y))))
+
+(define-fun IntOr32 ((x Int) (y Int)) Int
+    (Int32ToInt (bvor (IntToInt32 x) (IntToInt32 y))))
+
+(define-fun IntXor32 ((x Int) (y Int)) Int
+    (Int32ToInt (bvxor (IntToInt32 x) (IntToInt32 y))))
+
+(define-fun IntNot32 ((x Int)) Int
+    (Int32ToInt (bvnot (IntToInt32 x))))
+
+(define-fun js.& ((x Val) (y Val)) Val
+    (Num (IntAnd32 (js.ToNumber x) (js.ToNumber y))))
+
+(define-fun js.bitor ((x Val) (y Val)) Val
+    (Num (IntOr32 (js.ToNumber x) (js.ToNumber y))))
+
+(define-fun js.^ ((x Val) (y Val)) Val
+    (Num (IntXor32 (js.ToNumber x) (js.ToNumber y))))
+
+(define-fun js.~ ((x Val)) Val
+    (Num (IntNot32 (js.ToNumber x))))
