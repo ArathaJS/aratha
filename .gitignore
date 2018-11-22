@@ -4,3 +4,6 @@ z3.log
 inputlog.json
 *.inputlog.json
 solver_commands.smt2
+data.dzn
+model.fzn
+model.mzn
