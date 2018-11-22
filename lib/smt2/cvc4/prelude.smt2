@@ -1,6 +1,4 @@
 (set-option :produce-models true)
-(set-option :produce-unsat-cores true)
-;(set-option :strings-std-ascii false)
 
 ; Datatypes
 
