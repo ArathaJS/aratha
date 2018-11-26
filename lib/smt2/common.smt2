@@ -198,6 +198,29 @@
                 (to (ite (< ie 0) (max 0 (+ len ie)) (min ie len))))
                     (str.substr x from (max 0 (- to from)))))))
 
+(define-fun Split1 ((x String) (delim String)) Properties
+    (let ((n (str.indexof x delim 0)))
+        (ite (= n (- 1))
+            (store EmptyObject "0" (Just (Str x)))
+            (store EmptyObject "0" (Just (Str (str.substr x 0 n)))))))
+
+(define-fun Split2 ((x String) (delim String)) Properties
+    (let ((n (str.indexof x delim 0)))
+        (ite (= n (- 1))
+            (store EmptyObject "0" (Just (Str x)))
+            (store
+                (store EmptyObject "0" (Just (Str (str.substr x 0 n))))
+                "1"
+                (Just (Str (str.substr
+                    x
+                    (+ n 1)
+                    (- (str.len x) (+ n 1)))))))))
+
+(define-fun js.split ((x String) (delim String) (maxSplits Int)) Properties
+    (ite (= 0 maxSplits)
+        EmptyObject
+        (ite (= 1 maxSplits) (Split1 x delim) (Split2 x delim))))
+
 (define-fun js.constructArray ((len Val)) Properties
     (ite (is-Num len)
         (store EmptyObject "length" (Just len))
