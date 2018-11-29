@@ -38,6 +38,9 @@ function runScript(scriptPath, solverName, options) {
     if (process.env.Z3_PATH) {
         env.Z3_PATH = process.env.Z3_PATH;
     }
+    if (process.env.Z3STR_PATH) {
+        env.Z3STR_PATH = process.env.Z3STR_PATH;
+    }
     const analysis = child_process.spawn(
         "node", ["../src/js/commands/jalangi.js", "--analysis", "./", scriptPath], {
             stdio: "inherit",

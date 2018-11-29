@@ -9,13 +9,13 @@ OUTPUT=output.log
 ERRORS=errors.log
 RESULTS=results.log
 
-for solver in G-Strings cvc4 z3
+for solver in G-Strings cvc4 z3 z3str
 do
   echo "Running $solver"
   export SOLVER=$solver
   tot_cov=0
 #  for j in `cat recover_list | grep both`
-  for j in `find $IN_DIR -depth -name "*.js" | grep -v _jalangi_`
+  for j in `find $IN_DIR -depth -name "*.js" | grep -v _jalangi_ | sort`
   do
     echo "Testing $j"
     header="$solver|$j"
@@ -52,13 +52,13 @@ do
       fi
       cat $ilog
       nyc node $DIR/../experiments/bin/replay-inputs.js $j 2>/dev/null | strings | \
-      grep '  '`basename "$j"` | awk -F"|" '{print $5}' | sed 's/ //g' > $TMP
+      grep '  '`basename "$j"` | awk -F"|" '{print $2}' | sed 's/ //g' > $TMP
       cov=`cat $TMP`
       rm $ilog $TMP
     else
       cov=0
     fi  
-    echo "Coverage: $cov%"
+    echo "Stmt coverage: $cov%"
     header="$header|$ret|$cov|$time"
     if
       [[ "$cov" != "100" ]]
