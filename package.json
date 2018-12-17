@@ -1,0 +1,37 @@
+{
+  "name": "aratha",
+  "version": "0.0.1",
+  "description": "Multi-solver dynamic symbolic execution for JavaScript",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha",
+    "analyze": "jalangi2 --analysis ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ArathaJS/aratha.git"
+  },
+  "keywords": [
+    "dynamic symbolic execution",
+    "analysis"
+  ],
+  "contributors": [
+    "Mak Nazecic-Andrlon <mnazecic@student.unimelb.edu.au>",
+    "Roberto Amadini <ramadini@unimelb.edu.au>"
+  ],
+  "bugs": {
+    "url": "https://github.com/ArathaJS/aratha/issues"
+  },
+  "homepage": "https://github.com/ArathaJS/aratha#readme",
+  "devDependencies": {
+    "mocha": "^5.2.0"
+  },
+  "dependencies": {
+    "jalangi2": "github:Samsung/jalangi2",
+    "lodash": "^4.17.11"
+  }
+}

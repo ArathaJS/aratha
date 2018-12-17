@@ -11,7 +11,7 @@ const glob = require("glob");
 const { testCVC4, testZ3 } = require("./testUtils");
 
 describe("the analysis", function() {
-    const scriptPath = path.resolve(__dirname, "../../src/js/commands/jalangi.js");
+    const scriptPath = path.resolve(__dirname, "../node_modules/jalangi2/src/js/commands/jalangi.js");
     const examplesDir = path.resolve(__dirname, "examples");
     const analysisDir = path.resolve(__dirname, "../");
 
@@ -29,7 +29,7 @@ describe("the analysis", function() {
                 child_process.execFile(
                     "node", [scriptPath, "--analysis", analysisDir, filePath], {
                         env: {
-                            SMT_SOLVER: "cvc4",
+                            SOLVER: "cvc4",
                             CVC4_PATH: cvc4Path
                         }
                     }, done);
@@ -45,7 +45,7 @@ describe("the analysis", function() {
                 child_process.execFile(
                     "node", [scriptPath, "--analysis", analysisDir, filePath], {
                         env: {
-                            SMT_SOLVER: "z3",
+                            SOLVER: "z3",
                             Z3_PATH: z3Path
                         }
                     }, done);
