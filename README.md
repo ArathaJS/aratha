@@ -20,11 +20,15 @@ from this directory.
 
 ### Options
 
-The default solver is CVC4, and the environment variable `CVC4_PATH` must be set
-to the path to CVC4 if `cvc4` is not in your `PATH`.
+The default solver is G-Strings. Once the solver is installed, you need to 
+modify the `path` variable in G_Strings class (in `lib/g-strings.js`) with the 
+proper path to `<GDIR>/G-Strings/gecode-5.0.0/tools/flatzinc/`, where `<GDIR>`
+is the folder where G-Strings is installed.
 
-Alternatively, you can set `SOLVER=z3`to use Z3 instead. In this case,
-`Z3_PATH` must point to Z3 (or `z3` must be in your `PATH`).
+Alternatively, you can use an SMT solver by setting `SOLVER=cvc4` or `SOLVER=z3`
+to use CVC4 or Z3 solver respectively. Note that the environment variable
+`CVC4_PATH` (resp., `Z3_PATH`) must be set to the path to CVC4 (resp., Z3) if
+`cvc4` (resp., `z3`) is not in your `PATH`.
 
 ## Tests
 
