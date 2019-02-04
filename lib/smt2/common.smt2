@@ -291,6 +291,8 @@
 ; FIXME: this only works for ASCII.
 (define-fun js.isLowerCase ((s String)) Bool (not (str.in.re s (re.++ re.allchar (re.range "A" "Z") re.allchar))))
 (define-fun js.toLowerCase ((s String)) String s)
+(define-fun js.isUpperCase ((s String)) Bool (not (str.in.re s (re.++ re.allchar (re.range "a" "z") re.allchar))))
+(define-fun js.toUpperCase ((s String)) String s)
 
 
 (define-fun IntToInt32 ((x Int)) (_ BitVec 32) ((_ int2bv 32) x))
