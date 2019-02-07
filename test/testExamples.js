@@ -29,6 +29,7 @@ describe("the analysis", function() {
                 child_process.execFile(
                     "node", [scriptPath, "--analysis", analysisDir, filePath], {
                         env: {
+                            PATH: process.env.PATH,
                             SOLVER: "cvc4",
                             CVC4_PATH: cvc4Path
                         }
@@ -45,6 +46,7 @@ describe("the analysis", function() {
                 child_process.execFile(
                     "node", [scriptPath, "--analysis", analysisDir, filePath], {
                         env: {
+                            PATH: process.env.PATH,
                             SOLVER: "z3",
                             Z3_PATH: z3Path
                         }
