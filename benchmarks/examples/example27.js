@@ -1,4 +1,6 @@
 var x = J$.readInput();
-if (typeof x === "object" && x.length === 3)
-  console.log(1)
+if (x.length === 3) {
+  x.pop();
+  console.log(x.length)
+}
 
