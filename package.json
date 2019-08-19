@@ -33,6 +33,6 @@
   "dependencies": {
     "is-circular": "^1.0.2",
     "jalangi2": "github:Samsung/jalangi2",
-    "lodash": "^4.17.11"
+    "lodash": "^4.17.15"
   }
 }

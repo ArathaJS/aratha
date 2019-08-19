@@ -9,9 +9,7 @@ then
 else
   s=$2
 fi
-SOLVER=$s 
-
-npm run analyze -- $1
+SOLVER=$s npm run analyze -- $1
 
 ilog=`basename $1 | awk -F"." '{print $1}'`.inputlog.json
 mv inputlog.json $ilog
