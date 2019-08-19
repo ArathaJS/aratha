@@ -1,14 +1,13 @@
-#!/bin/sh
+#!/bin/bash
 
 DIR=`dirname $(readlink -f "$0")`
 if
-  [[ `nyc 2>/dev/null` ]]
+  [[ `which nyc` ]]
 then
   NYC=nyc
 else
   NYC=$DIR/node_modules/nyc/bin/nyc.js
 fi
-
 if
   [ -z $2 ]
 then

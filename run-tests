@@ -2,7 +2,7 @@
 
 DIR=`dirname $(readlink -f "$0")`
 if
-  [[ `nyc 2>/dev/null` ]]
+  [[ `which nyc` ]]
 then
   NYC=nyc
 else
