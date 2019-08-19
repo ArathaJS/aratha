@@ -1,6 +1,13 @@
 #!/bin/bash
 
 DIR=`dirname $(readlink -f "$0")`
+if
+  [[ `nyc 2>/dev/null` ]]
+then
+  NYC=nyc
+else
+  NYC=$DIR/node_modules/nyc/bin/nyc.js
+fi
 TDIR=$DIR/benchmarks/examples
 JAL=$DIR/src/js/commands/jalangi.js
 N_TESTS=29
@@ -18,7 +25,7 @@ do
   mv inputlog.json $ilog
   echo "===== INPUT ===== "
   cat $ilog
-  nyc node $DIR/bin/replay-inputs.js $j 2>/dev/null | strings | \
+  $NYC node $DIR/bin/replay-inputs.js $j 2>/dev/null | strings | \
     grep '  '`basename "$j"` | awk -F"|" '{print $5}' | sed 's/ //g' > x
   cov=`cat x`
   rm x $ilog $TDIR/*_jalangi_*

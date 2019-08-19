@@ -1,6 +1,13 @@
 #!/bin/sh
 
-DIR=/home/roberto/aratha
+DIR=`dirname $(readlink -f "$0")`
+if
+  [[ `nyc 2>/dev/null` ]]
+then
+  NYC=nyc
+else
+  NYC=$DIR/node_modules/nyc/bin/nyc.js
+fi
 
 if
   [ -z $2 ]
@@ -14,13 +21,13 @@ SOLVER=$s npm run analyze -- $1
 ilog=`basename $1 | awk -F"." '{print $1}'`.inputlog.json
 mv inputlog.json $ilog
 
-nyc node $DIR/bin/replay-inputs.js $1
+$NYC node $DIR/bin/replay-inputs.js $1
 
 #echo "===== SOURCE ====="; cat $1 | awk '{print NR,"\t",$0}'
 
 echo "===== INPUT ===== ";  cat $ilog
 
-nyc report --reporter=html
+$NYC report --reporter=html
 
 xdg-open $DIR/coverage/index.html
 
