@@ -1,9 +1,9 @@
 import csv
 
-SOLVERS = ('G-Strings', 'cvc4', 'z3', 'G-Strings,z3,cvc4')
+SOLVERS = ('G-Strings', 'cvc4', 'z3', 'pfolio_simple', 'pfolio_nogood')
 N_PROBS = 197
 TIMEOUT = 300
-COVMODE = 'line'
+COVMODE = 'stmt'
 
 results = {}
 coves = dict((s, 0.0) for s in SOLVERS)
@@ -39,7 +39,7 @@ for row in reader:
   if float(row[8]) >= TIMEOUT:
     time = TIMEOUT
     touts[solv] += 1
-    if solv == 'G-Strings,z3,cvc4':
+    if solv.startswith('pfolio'):
       print row
   else:
     time = float(row[8])
@@ -70,13 +70,13 @@ for inst, item in results.items():
       cov_j = item[s_j][0]
       if (cov_i > cov_j):
         better[(s_i, s_j)] += 1
-        if s_j == 'G-Strings,z3,cvc4':
+        if s_j.startswith('pfolio'):
           print 'ooops',inst, item
       elif (cov_i < cov_j):
         better[(s_j, s_i)] += 1
-        if s_j == 'G-Strings,z3,cvc4' and i == 0:
-          x = [k for k in range(0, j) if k != j and cov_j > item[SOLVERS[k]][0]]
-          if len(x) == len(SOLVERS) - 1:
+        if s_j.startswith('pfolio') and i == 0:
+          x = [k for k in range(0, j - 1) if k != j and cov_j > item[SOLVERS[k]][0]]
+          if len(x) == len(SOLVERS) - 2:
              print inst, item, x
               
 for s, n in sorted(better.items()):

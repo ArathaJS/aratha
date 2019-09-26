@@ -2,6 +2,7 @@ DIR=`dirname $(readlink -f "$0")`
 IN_DIR=$DIR/test/ExpoSE
 OUT_DIR=$HOME/jalangi2-concolic/experiments
 ARATHA_DIR=$HOME/aratha
+NOGOODS=$ARATHA_DIR/nogoods.json
 TMP=tmp.log
 TIMEOUT=300
 INPUT=$OUT_DIR/input.log
@@ -10,13 +11,14 @@ ERRORS=$OUT_DIR/errors.log
 RESULTS=$OUT_DIR/results-pfolio.log
 PFOLIO=(G-Strings z3 cvc4)
 NUM_SOLVERS=${#PFOLIO[@]}
+USE_NOGOODS=1
 TOUT=100
 
 cd $ARATHA_DIR
 echo "Running portfolio [${PFOLIO[@]}]"
 export SOLVER=$PFOLIO
 tot_stmt=0
-for j in `find $IN_DIR -depth -name "*.js" | grep -v _jalangi_ | sort`
+for j in `find $IN_DIR -depth -name "*.js" | grep -v _jalangi_ | sort | grep regex__old__replace_and_length2`
 do
   echo "Testing $j"
   header=`echo ${PFOLIO[@]} | sed 's/ /,/g'`"|$j"
@@ -25,6 +27,7 @@ do
   echo >> $ERRORS
   echo $header >> $ERRORS
   echo '' > $INPUT
+  echo '' > $NOGOODS
   tot_time=0.0
   i=0
   for solver in ${PFOLIO[@]}
@@ -62,6 +65,11 @@ do
       cat $TMP | sed '/^$/d' | sed "s/ ,$/,/g" > $ilog
       echo "===== INPUT ===== "
       cat $ilog
+      if
+        [ $USE_NOGOODS -eq 1 ]
+      then
+        cat $ilog >> $NOGOODS
+      fi
       nimp=`cat $ilog | grep ^"{" | sed 's/,$//g' | sort | uniq | wc -l`
       cp $j $ARATHA_DIR
       time -p (nyc node bin/replay-inputs.js `basename $j` 2>/dev/null | strings | \
@@ -107,6 +115,7 @@ do
   then
     tot_stmt=$(awk "BEGIN {print $tot_stmt + $stmt; exit}")
   fi
+  exit
   echo $header >> $RESULTS
   cp $RESULTS ~/Dropbox
 done
