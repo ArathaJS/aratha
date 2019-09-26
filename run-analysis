@@ -1,5 +1,8 @@
 #!/bin/bash
 
+#FIXME: For some reason, nyc may require the analysed file to be in the same
+#       location of this script.
+
 DIR=`dirname $(readlink -f "$0")`
 if
   [[ `which nyc` ]]
