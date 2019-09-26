@@ -3,7 +3,7 @@ import csv
 SOLVERS = ('G-Strings', 'cvc4', 'z3', 'pfolio_simple', 'pfolio_nogood')
 N_PROBS = 197
 TIMEOUT = 300
-COVMODE = 'stmt'
+COVMODE = 'line'
 
 results = {}
 coves = dict((s, 0.0) for s in SOLVERS)
@@ -53,10 +53,10 @@ for row in reader:
 #assert n == len(SOLVERS) * N_PROBS
 n = N_PROBS
 print 'Total # problems',n
-print 'Average %',COVMODE,'coverage:', sorted(((s, coves[s]/n) for s in SOLVERS), key = lambda x: -x[1])
-print 'Average # unique inputs:', sorted(((s, nimps[s]/n) for s in SOLVERS), key = lambda x: -x[1])
-print 'Average time [sec.]:', sorted(((s, times[s]/n) for s in SOLVERS), key = lambda x:  x[1])
-print 'Number of timeouts:', sorted(((s, touts[s]) for s in SOLVERS), key = lambda x:  x[1])
+print 'Average %',COVMODE,'coverage:', sorted(((s, round(coves[s]/n,2)) for s in SOLVERS), key = lambda x: -x[1])
+print 'Average # unique inputs:', sorted(((s, round(nimps[s]/n,2)) for s in SOLVERS), key = lambda x: -x[1])
+print 'Average time [sec.]:', sorted(((s, round(times[s]/n,2)) for s in SOLVERS), key = lambda x:  x[1])
+print 'Number of timeouts:', sorted(((s, round(touts[s],2)) for s in SOLVERS), key = lambda x:  x[1])
 print '=========='
 
 better = dict(((s_i, s_j), 0) for s_i in SOLVERS for s_j in SOLVERS if s_i != s_j)
