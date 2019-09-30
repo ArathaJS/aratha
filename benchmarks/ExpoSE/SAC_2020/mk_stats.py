@@ -3,7 +3,7 @@ import csv
 SOLVERS = ('G-Strings', 'cvc4', 'z3', 'pfolio_simple', 'pfolio_nogood')
 N_PROBS = 197
 TIMEOUT = 300
-COVMODE = 'stmt'
+COVMODE = 'line'
 
 results = {}
 coves = dict((s, 0.0) for s in SOLVERS)
