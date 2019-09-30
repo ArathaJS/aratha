@@ -18,7 +18,7 @@ cd $ARATHA_DIR
 echo "Running portfolio [${PFOLIO[@]}]"
 export SOLVER=$PFOLIO
 tot_stmt=0
-for j in `find $IN_DIR -depth -name "*.js" | grep -v _jalangi_ | sort | grep regex__old__replace_and_length2`
+for j in `find $IN_DIR -depth -name "*.js" | grep -v _jalangi_ | sort`
 do
   echo "Testing $j"
   header=`echo ${PFOLIO[@]} | sed 's/ /,/g'`"|$j"
