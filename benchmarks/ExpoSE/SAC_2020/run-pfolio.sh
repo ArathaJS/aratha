@@ -115,7 +115,6 @@ do
   then
     tot_stmt=$(awk "BEGIN {print $tot_stmt + $stmt; exit}")
   fi
-  exit
   echo $header >> $RESULTS
   cp $RESULTS ~/Dropbox
 done
