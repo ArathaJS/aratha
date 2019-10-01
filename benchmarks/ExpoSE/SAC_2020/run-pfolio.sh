@@ -5,23 +5,23 @@ ARATHA_DIR=$HOME/aratha
 NOGOODS=$ARATHA_DIR/nogoods.json
 TMP=tmp.log
 TIMEOUT=300
-INPUT=$OUT_DIR/input.log
-OUTPUT=$OUT_DIR/output.log
-ERRORS=$OUT_DIR/errors.log
+INPUT=$OUT_DIR/input-pfolio.log
+OUTPUT=$OUT_DIR/output-pfolio.log
+ERRORS=$OUT_DIR/errors-pfolio.log
 RESULTS=$OUT_DIR/results-pfolio.log
 PFOLIO=(G-Strings z3 cvc4)
 NUM_SOLVERS=${#PFOLIO[@]}
-USE_NOGOODS=1
+USE_NOGOODS=0
 TOUT=100
 
 cd $ARATHA_DIR
 echo "Running portfolio [${PFOLIO[@]}]"
 export SOLVER=$PFOLIO
 tot_stmt=0
-for j in `find $IN_DIR -depth -name "*.js" | grep -v _jalangi_ | sort | grep regex__core__star__lazy`
+for j in `find $IN_DIR -depth -name "*.js" | grep -v _jalangi_ | sort`
 do
   echo "Testing $j"
-  header=`echo ${PFOLIO[@]} | sed 's/ /,/g'`"|$j"
+  header=`echo ${PFOLIO[@]} | sed 's/ /,/g'`"|$USE_NOGOODS|$j"
   echo >> $OUTPUT 
   echo $header >> $OUTPUT
   echo >> $ERRORS
@@ -110,7 +110,6 @@ do
   echo "Lines coverage: $line%"
   header="$header|$ret|$stmt|$branch|$func|$line|$nimp|$tot_time"
   echo $header
-exit #FIXME
   if
     [ $stmt != "0" ]
   then
