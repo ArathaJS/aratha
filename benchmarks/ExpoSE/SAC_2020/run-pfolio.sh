@@ -1,6 +1,6 @@
 DIR=`dirname $(readlink -f "$0")`
-IN_DIR=$DIR/test/ExpoSE
-OUT_DIR=$HOME/jalangi2-concolic/experiments
+IN_DIR=$DIR/../
+OUT_DIR=$DIR
 ARATHA_DIR=$HOME/aratha
 NOGOODS=$ARATHA_DIR/nogoods.json
 TMP=tmp.log
@@ -18,7 +18,7 @@ cd $ARATHA_DIR
 echo "Running portfolio [${PFOLIO[@]}]"
 export SOLVER=$PFOLIO
 tot_stmt=0
-for j in `find $IN_DIR -depth -name "*.js" | grep -v _jalangi_ | sort`
+for j in `find $IN_DIR -depth -name "*.js" | grep -v _jalangi_ | sort | grep regex__core__star__lazy`
 do
   echo "Testing $j"
   header=`echo ${PFOLIO[@]} | sed 's/ /,/g'`"|$j"
@@ -110,6 +110,7 @@ do
   echo "Lines coverage: $line%"
   header="$header|$ret|$stmt|$branch|$func|$line|$nimp|$tot_time"
   echo $header
+exit #FIXME
   if
     [ $stmt != "0" ]
   then

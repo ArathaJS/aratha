@@ -1,14 +1,14 @@
 #!/bin/bash
 
 DIR=`dirname $(readlink -f "$0")`
-IN_DIR=$DIR/test/ExpoSE
-OUT_DIR=$HOME/jalangi2-concolic/experiments
+IN_DIR=$DIR/..
+OUT_DIR=$DIR
 ARATHA_DIR=$HOME/aratha
 TMP=tmp.log
 TIMEOUT=300
-OUTPUT=$OUT_DIR/output.log
-ERRORS=$OUT_DIR/errors.log
-RESULTS=$OUT_DIR/results-250920.log
+OUTPUT=$OUT_DIR/output-solvers.log
+ERRORS=$OUT_DIR/errors-solvers.log
+RESULTS=$OUT_DIR/results-solvers.log
 
 cd $ARATHA_DIR
 for solver in G-Strings cvc4 z3
