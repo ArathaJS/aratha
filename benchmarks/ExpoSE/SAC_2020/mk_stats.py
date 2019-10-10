@@ -3,14 +3,14 @@ import csv
 SOLVERS = ('G-Strings', 'cvc4', 'z3', 'pfolio_simple', 'pfolio_nogood')
 N_PROBS = 197
 TIMEOUT = 300
-COVMODE = 'line'
+COVMODE = 'stmt'
 
 results = {}
 coves = dict((s, 0.0) for s in SOLVERS)
 nimps = dict((s, 0.0) for s in SOLVERS)
 times = dict((s, 0.0) for s in SOLVERS)
 touts = dict((s, 0) for s in SOLVERS)
-infile = 'results_tot'
+infile = 'results-total.log'
 reader = csv.reader(open(infile), delimiter = '|')
 n = 0
 
@@ -70,7 +70,7 @@ for inst, item in results.items():
       cov_j = item[s_j][0]
       if (cov_i > cov_j):
         better[(s_i, s_j)] += 1
-        if s_j.startswith('pfolio'):
+        if s_j.startswith('pfolio') and i == 0:
           print 'ooops',inst, item
       elif (cov_i < cov_j):
         better[(s_j, s_i)] += 1
