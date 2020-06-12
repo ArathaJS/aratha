@@ -4,6 +4,7 @@
 #       location of this script.
 
 DIR=`dirname $(readlink -f "$0")`
+JAL=$DIR/src/js/commands/jalangi.js
 if
   [[ `which nyc` ]]
 then
@@ -18,7 +19,7 @@ then
 else
   s=$2
 fi
-SOLVER=$s npm run analyze -- $1
+SOLVER=$s node $JAL --analysis ./ $1
 
 ilog=`basename $1 | awk -F"." '{print $1}'`.inputlog.json
 mv inputlog.json $ilog
@@ -31,7 +32,7 @@ echo "===== INPUT =====";  cat $ilog
 
 $NYC report --reporter=html
 
-#xdg-open $DIR/coverage/index.html
+xdg-open $DIR/coverage/index.html
 
 rm $ilog
 

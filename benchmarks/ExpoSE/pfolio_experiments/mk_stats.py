@@ -45,7 +45,7 @@ for row in reader:
     time = float(row[8])
   if not inst in results.keys():
     results[inst] = {}
-  results[inst][solv] = (cove, time)
+  results[inst][solv] = (cove, time, round(float(row[3]), 2) if COVMODE == 'line' else round(float(row[6]), 2))
   coves[solv] += cove
   nimps[solv] += nimp
   times[solv] += time
@@ -59,9 +59,20 @@ print 'Average time [sec.]:', sorted(((s, round(times[s]/n,2)) for s in SOLVERS)
 print 'Number of timeouts:', sorted(((s, round(touts[s],2)) for s in SOLVERS), key = lambda x:  x[1])
 print '=========='
 
+vbs_time = 0.0
+vbs_stmt = 0.0
+vbs_line = 0.0
 better = dict(((s_i, s_j), 0) for s_i in SOLVERS for s_j in SOLVERS if s_i != s_j)
 for inst, item in results.items():
 #  print inst, item
+  m = max([(item[s][0], -item[s][1], item[s][2]) for s in ('G-Strings', 'cvc4', 'z3')])
+  vbs_time += -m[1]
+  if COVMODE == 'stmt':
+    vbs_stmt += m[0]
+    vbs_line += m[2]
+  else:
+    vbs_stmt += m[2]
+    vbs_line += m[0]
   for i in range(0, len(SOLVERS)):
     s_i = SOLVERS[i]    
     cov_i = item[s_i][0]
@@ -101,3 +112,12 @@ for inst, item in results.items():
 for s, n in sorted(faster.items()):
   print s[0],'is faster than',s[1],'when',COVMODE,'coverage is better or equal:',n,'times'
 print '=========='
+
+print('VBS_' + COVMODE + ' line coverage ):', vbs_line/N_PROBS)
+print('VBS_' + COVMODE + ' stmt coverage ):', vbs_stmt/N_PROBS)
+print('VBS_' + COVMODE + ' time):', vbs_time/N_PROBS)
+
+
+
+
+
