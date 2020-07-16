@@ -35,6 +35,6 @@
     "is-circular": "^1.0.2",
     "jalangi2": "github:Samsung/jalangi2",
     "lockfile": "^1.0.4",
-    "lodash": "^4.17.15"
+    "lodash": "^4.17.19"
   }
 }
