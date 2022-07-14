@@ -28,14 +28,13 @@
   },
   "homepage": "https://github.com/ArathaJS/aratha#readme",
   "devDependencies": {
-    "mocha": "^5.2.0",
+    "mocha": "^10.0.0",
     "nyc": "^14.1.1"
   },
   "dependencies": {
     "is-circular": "^1.0.2",
     "jalangi2": "github:Samsung/jalangi2",
     "lockfile": "^1.0.4",
-    "lodash": "^4.17.15"
+    "lodash": "^4.17.21"
   }
 }
-
