@@ -5,6 +5,8 @@
 
 DIR=`dirname $(readlink -f "$0")`
 JAL=$DIR/src/js/commands/jalangi.js
+BRO=firefox
+
 if
   [[ `which nyc` ]]
 then
@@ -32,7 +34,7 @@ echo "===== INPUT =====";  cat $ilog
 
 $NYC report --reporter=html
 
-xdg-open $DIR/coverage/index.html
+$BRO $DIR/coverage/index.html
 
 rm $ilog
 
